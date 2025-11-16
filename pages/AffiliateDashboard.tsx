@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -11,14 +10,17 @@ const AffiliateDashboard: React.FC = () => {
     const [isCopied, setIsCopied] = useState(false);
 
     useEffect(() => {
-        if (user?.role === 'affiliate' && user.affiliateId) {
-            const link = `${window.location.origin}${window.location.pathname}?ref=${user.affiliateId}`;
-            setReferralLink(link);
+        const loadData = async () => {
+            if (user?.role === 'affiliate' && user.affiliateId) {
+                const link = `${window.location.origin}${window.location.pathname}?ref=${user.affiliateId}`;
+                setReferralLink(link);
 
-            const allUsers = authService.getAllUsers();
-            const count = allUsers.filter(u => u.referredBy === user.affiliateId).length;
-            setReferredUsersCount(count);
-        }
+                const allUsers = await authService.getAllUsers();
+                const count = allUsers.filter(u => u.referredBy === user.affiliateId).length;
+                setReferredUsersCount(count);
+            }
+        };
+        loadData();
     }, [user]);
 
     const handleCopy = () => {

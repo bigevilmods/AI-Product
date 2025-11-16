@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -13,7 +12,8 @@ import AffiliateDashboard from './pages/AffiliateDashboard';
 import type { AppView } from './types';
 
 
-function AppContent() {
+// FIX: Refactored `AppContent` from a function declaration to a constant with an arrow function to maintain consistency and avoid potential hoisting-related type inference issues.
+const AppContent = () => {
   const { user } = useAuth();
   const [view, setView] = React.useState<AppView>('home');
   const [isLoginOpen, setIsLoginOpen] = React.useState(false);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import type { User, UserRole } from '../types';
 import { authService } from '../services/authService';
@@ -28,8 +27,8 @@ const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<AffiliateStat[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
 
-  const fetchUsers = () => {
-    const allUsers = authService.getAllUsers();
+  const fetchUsers = async () => {
+    const allUsers = await authService.getAllUsers();
     setUsers(allUsers);
     const initialCommissions = allUsers.reduce((acc, u) => {
       if (u.role === 'affiliate' && u.commissionRate) {
@@ -41,8 +40,8 @@ const AdminDashboard: React.FC = () => {
     return allUsers;
   };
 
-  const fetchAnalytics = (allUsers: User[]) => {
-      const allTransactions = paymentService.getAllTransactions();
+  const fetchAnalytics = async (allUsers: User[]) => {
+      const allTransactions = await paymentService.getAllTransactions();
       const affiliates = allUsers.filter(u => u.role === 'affiliate');
       const affiliateStats = affiliates.map(affiliate => {
           const referredUsers = allUsers.filter(u => u.referredBy === affiliate.affiliateId);
@@ -58,24 +57,27 @@ const AdminDashboard: React.FC = () => {
           };
       });
       setStats(affiliateStats);
-      setTotalRevenue(paymentService.getTotalRevenue());
+      setTotalRevenue(await paymentService.getTotalRevenue());
   };
 
   useEffect(() => {
-    if (user?.role === 'admin') {
-      setIsLoading(true);
-      const allUsers = fetchUsers();
-      fetchAnalytics(allUsers);
-      const savedNotification = localStorage.getItem('globalNotification');
-      if (savedNotification) {
-        try {
-          const parsed = JSON.parse(savedNotification);
-          setCurrentNotification(parsed.message);
-          setNotificationMessage(parsed.message);
-        } catch (e) { console.error("Error parsing notification.", e); }
-      }
-      setIsLoading(false);
+    const loadData = async () => {
+        if (user?.role === 'admin') {
+          setIsLoading(true);
+          const allUsers = await fetchUsers();
+          await fetchAnalytics(allUsers);
+          const savedNotification = localStorage.getItem('globalNotification');
+          if (savedNotification) {
+            try {
+              const parsed = JSON.parse(savedNotification);
+              setCurrentNotification(parsed.message);
+              setNotificationMessage(parsed.message);
+            } catch (e) { console.error("Error parsing notification.", e); }
+          }
+          setIsLoading(false);
+        }
     }
+    loadData();
   }, [user]);
 
   const handlePublishNotification = () => {
@@ -94,15 +96,15 @@ const AdminDashboard: React.FC = () => {
     alert('Notification cleared!');
   };
 
-  const handleRoleChange = (userId: string, newRole: UserRole) => {
-    authService.setUserRole(userId, newRole);
-    fetchUsers();
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    await authService.setUserRole(userId, newRole);
+    await fetchUsers();
   };
 
-  const handleGrantCredits = () => {
+  const handleGrantCredits = async () => {
     if (isGrantingCredits && creditsToGrant > 0) {
-      authService.grantCredits(isGrantingCredits.id, creditsToGrant);
-      fetchUsers();
+      await authService.grantCredits(isGrantingCredits.id, creditsToGrant);
+      await fetchUsers();
       setIsGrantingCredits(null);
     }
   };
@@ -111,11 +113,11 @@ const AdminDashboard: React.FC = () => {
       setCommissionInputs(prev => ({...prev, [userId]: value}));
   };
 
-  const handleSetCommission = (userId: string) => {
+  const handleSetCommission = async (userId: string) => {
       const ratePercentage = parseFloat(commissionInputs[userId]);
       if (!isNaN(ratePercentage) && ratePercentage >= 0 && ratePercentage <= 100) {
-          authService.setCommissionRate(userId, ratePercentage / 100);
-          fetchUsers();
+          await authService.setCommissionRate(userId, ratePercentage / 100);
+          await fetchUsers();
           alert('Commission rate updated!');
       } else {
           alert('Please enter a valid percentage (0-100).');

@@ -28,13 +28,15 @@ const fileToBase64 = (file: File): Promise<string> => {
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onImageUpload, multiple = false }) => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = useCallback(async (files: FileList | null) => {
+    setError(null);
     if (files && files.length > 0) {
       const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
       
       if (imageFiles.length === 0) {
-        alert('Please select valid image files.');
+        setError('Please select valid image files.');
         return;
       }
       
@@ -106,6 +108,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
           </div>
         )}
       </label>
+      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
     </div>
   );
 };

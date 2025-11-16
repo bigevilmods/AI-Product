@@ -1,10 +1,11 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { generateVideo } from '../services/geminiService';
-import { SparklesIcon, LoadingSpinnerIcon, UserIcon } from '../components/icons';
+import { SparklesIcon, LoadingSpinnerIcon, UserIcon, XIcon } from '../components/icons';
 import ModelSelector from '../components/ModelSelector';
-import type { VideoModel } from '../types';
+import type { VideoModel, ImageFile } from '../types';
 
 interface VideoGeneratorProps {
   requestLogin?: () => void;
@@ -34,8 +35,11 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<VideoModel>('gemini-veo');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
+  const [duration, setDuration] = useState<number>(5);
   const [apiKeySelected, setApiKeySelected] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
+  const [startImage, setStartImage] = useState<ImageFile | null>(null);
+  const [isCapturingFrame, setIsCapturingFrame] = useState<boolean>(false);
   const messageIntervalRef = useRef<number | null>(null);
 
   const isVEOSelected = selectedModel === 'gemini-veo';
@@ -86,6 +90,47 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     }
   };
 
+  const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsCapturingFrame(true);
+    setError(null);
+    setStartImage(null);
+    
+    const videoEl = document.createElement('video');
+    videoEl.preload = 'metadata';
+    videoEl.muted = true;
+    videoEl.src = URL.createObjectURL(file);
+
+    videoEl.onloadedmetadata = () => {
+        videoEl.currentTime = videoEl.duration;
+    };
+
+    videoEl.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = videoEl.videoWidth;
+        canvas.height = videoEl.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const base64 = dataUrl.split(',')[1];
+            setStartImage({ base64, mimeType: 'image/jpeg' });
+        } else {
+            setError("Failed to create canvas to capture frame.");
+        }
+        URL.revokeObjectURL(videoEl.src);
+        setIsCapturingFrame(false);
+    };
+
+    videoEl.onerror = () => {
+        setError("Could not load video to capture frame.");
+        URL.revokeObjectURL(videoEl.src);
+        setIsCapturingFrame(false);
+    };
+  };
+
   const handleGenerateVideo = useCallback(async () => {
     if (!user) {
       requestLogin?.();
@@ -109,7 +154,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
 
     try {
       spendCredit(creditCost);
-      const videoUrl = await generateVideo(prompt, selectedModel, aspectRatio);
+      const videoUrl = await generateVideo(prompt, selectedModel, aspectRatio, duration, startImage);
       setGeneratedVideoUrl(videoUrl);
     } catch (e) {
       console.error(e);
@@ -121,7 +166,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, user, spendCredit, selectedModel, aspectRatio, isVEOSelected, requestLogin]);
+  }, [prompt, user, spendCredit, selectedModel, aspectRatio, duration, isVEOSelected, requestLogin, startImage]);
   
   if (isVEOSelected && !apiKeySelected) {
       return (
@@ -159,21 +204,85 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
           />
         </div>
 
-        <div className="flex items-center gap-4 bg-slate-800 p-2 rounded-lg shadow-md">
-            <span className="text-slate-300 font-medium pl-2">Aspect Ratio:</span>
-            <button
-                onClick={() => setAspectRatio('9:16')}
-                className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '9:16' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+        <div className="w-full bg-slate-800 p-6 rounded-lg shadow-md flex flex-col">
+          <h3 className="text-xl font-semibold text-slate-200 mb-4">Start Video from Last Frame (Optional)</h3>
+          <div className="flex items-center flex-wrap gap-4">
+            <input
+              type="file"
+              accept="video/*"
+              id="video-upload"
+              className="hidden"
+              onChange={handleVideoUpload}
+              disabled={isLoading || isCapturingFrame}
+            />
+            <label
+              htmlFor="video-upload"
+              className={`inline-flex items-center px-4 py-2 rounded-md font-semibold transition-colors cursor-pointer ${isLoading || isCapturingFrame ? 'bg-slate-600 text-slate-400 cursor-not-allowed' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
             >
-                9:16 (Portrait)
-            </button>
-            <button
-                onClick={() => setAspectRatio('16:9')}
-                className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '16:9' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-            >
-                16:9 (Landscape)
-            </button>
+              Upload Video
+            </label>
+            {isCapturingFrame && (
+              <div className="flex items-center gap-2 text-slate-400">
+                <LoadingSpinnerIcon className="w-5 h-5 animate-spin" />
+                <span>Capturing frame...</span>
+              </div>
+            )}
+            {startImage && (
+              <div className="relative">
+                <img
+                  src={`data:${startImage.mimeType};base64,${startImage.base64}`}
+                  alt="Captured last frame"
+                  className="w-32 h-auto rounded-md border-2 border-purple-500"
+                />
+                <button
+                    onClick={() => {
+                        setStartImage(null);
+                        const input = document.getElementById('video-upload') as HTMLInputElement;
+                        if (input) input.value = '';
+                    }}
+                    className="absolute -top-2 -right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-500"
+                    aria-label="Remove captured frame"
+                >
+                    <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">Upload a video to use its final frame as the starting point for the new generation.</p>
         </div>
+
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex items-center gap-4 bg-slate-800 p-2 rounded-lg shadow-md">
+                <span className="text-slate-300 font-medium pl-2">Aspect Ratio:</span>
+                <button
+                    onClick={() => setAspectRatio('9:16')}
+                    className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '9:16' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                >
+                    9:16
+                </button>
+                <button
+                    onClick={() => setAspectRatio('16:9')}
+                    className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '16:9' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                >
+                    16:9
+                </button>
+            </div>
+            <div className="flex items-center gap-4 bg-slate-800 p-3 rounded-lg shadow-md w-full max-w-xs sm:w-auto">
+                <label htmlFor="duration-slider" className="text-slate-300 font-medium whitespace-nowrap">Duration:</label>
+                <input
+                    id="duration-slider"
+                    type="range"
+                    min="4"
+                    max="8"
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value, 10))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer range-thumb-purple"
+                    style={{'--thumb-color': 'rgb(168 85 247)'} as React.CSSProperties}
+                />
+                <span className="font-semibold text-white bg-slate-700 rounded-md px-3 py-1 w-16 text-center">{duration}s</span>
+            </div>
+        </div>
+
 
         <div className="flex justify-center">
           <button
@@ -227,6 +336,26 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
           )}
         </div>
       </div>
+      <style>{`
+        .range-thumb-purple::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+        .range-thumb-purple::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--thumb-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+      `}</style>
     </>
   );
 };

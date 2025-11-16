@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { generateStoryboard, generateImage, generateVideo } from '../services/geminiService';
@@ -120,7 +121,7 @@ const StoryboardGenerator: React.FC<StoryboardGeneratorProps> = ({ requestLogin 
         
         try {
             spendCredit(5);
-            const url = await generateVideo(videoPrompt, 'gemini-veo', '16:9');
+            const url = await generateVideo(videoPrompt, 'gemini-veo', '16:9', 8);
             setGeneratedVideoUrl(url);
         } catch (e) {
             const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';

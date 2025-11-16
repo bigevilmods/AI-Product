@@ -1,150 +1,92 @@
-
-import type { PixCharge, PaymentStatus, Transaction, CardPaymentResponse } from '../types';
+import type { Transaction } from '../types';
 import { authService } from './authService';
 
-const pendingTransactions = new Map<string, { charge: PixCharge; confirmAt: number; amount: number; userId: string }>();
+// --- PRODUCTION ARCHITECTURE NOTE ---
+// Este arquivo simula endpoints de backend para um ambiente de produção.
+// O backend real (Node.js, etc.) seria o único a ter acesso ao banco de dados MySQL
+// e às chaves secretas do Mercado Pago (ACCESS TOKEN).
 
-const mockTransactionDb: Transaction[] = [
-    {
-        id: 'tx_12345',
-        userId: 'user-3',
-        amountPaid: 9.00,
-        creditsPurchased: 50,
-        timestamp: Date.now() - 86400000,
-        affiliateId: 'aff-user-4',
-        commissionPaid: 1.35,
+const serverApi = {
+    /**
+     * Simulates a backend endpoint for creating a PIX payment.
+     * The backend would use the Mercado Pago SDK with its secret ACCESS TOKEN.
+     */
+    async createPixPayment(amountInUSD: string, creditAmount: number, userEmail: string): Promise<{ qr_code: string; qr_code_base64: string, expiration: number }> {
+        console.log(`[Payment Service] Simulating API call to POST /api/payments/pix`);
+        // PRODUÇÃO: `const response = await fetch('/api/payments/pix', { method: 'POST', body: JSON.stringify(...) });`
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const expirationTime = Date.now() + 10 * 60 * 1000; // 10 minutes from now
+
+        return {
+            qr_code: '00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-4266554400005204000053039865802BR5913John Doe6009SAO PAULO62070503***6304ABCD',
+            qr_code_base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+            expiration: expirationTime,
+        };
+    },
+
+    /**
+     * Simulates a backend endpoint for processing a card payment.
+     * It receives a secure token from the frontend, not the raw card details.
+     */
+    async processCardPayment(token: string, amount: string, email: string): Promise<{ status: 'approved' | 'rejected', message: string }> {
+        console.log(`[Payment Service] Simulating API call to POST /api/payments/card`);
+        // PRODUÇÃO: `const response = await fetch('/api/payments/card', { method: 'POST', body: JSON.stringify({ token, amount, email }) });`
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // No backend real, você usaria o token de acesso para fazer a chamada à API de pagamento.
+        // Se for bem-sucedido, você criaria o registro da transação no MySQL.
+        // O webhook então concederia os créditos de forma confiável.
+        // Para esta simulação, assumimos que é sempre aprovado.
+        return {
+            status: 'approved',
+            message: 'Payment successful! Your credits will be added shortly after confirmation.'
+        };
+    },
+
+    // Em produção, estas funções de admin buscariam dados de uma API de backend segura que consulta o MySQL.
+    async getAllTransactions(): Promise<Transaction[]> {
+        console.log('[Payment Service] Simulating API call to GET /api/admin/transactions');
+        // PRODUÇÃO: `const response = await fetch('/api/admin/transactions'); return response.json();`
+        await new Promise(resolve => setTimeout(resolve, 300));
+        // Retornando dados de exemplo para o painel de administração.
+        return [
+            {
+                id: 'tx_12345',
+                userId: 'user-3',
+                amountPaid: 9.00,
+                creditsPurchased: 50,
+                timestamp: Date.now() - 86400000,
+                affiliateId: 'aff-user-4',
+                commissionPaid: 1.35,
+            }
+        ];
+    },
+
+    async getTotalRevenue(): Promise<number> {
+        console.log('[Payment Service] Simulating API call to GET /api/admin/revenue');
+        // PRODUÇÃO: `const response = await fetch('/api/admin/revenue'); const data = await response.json(); return data.totalRevenue;`
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return 9.00; // Exemplo estático
     }
-];
-
-// This function simulates a backend creating a payment with Mercado Pago SDK
-const simulateMercadoPagoApiCall = (amountInUSD: string, userEmail: string): PixCharge => {
-    const transactionId = `mp_${Date.now()}`;
-    const qrCodeCopyPaste = `00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-4266554400005204000053039865405${amountInUSD}5802BR5913CIELO JORE6009SAO PAULO62070503***6304EAF2`;
-    const qrCodeBase64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADIAQMAAACXljzdAAAABlBMVEX///8AAABVwtN+AAABaklEQVR42uyYQY7DIAwEgf//0713PS4aSAhksmm3dZJkH1YgU+Abp64L4sXgT3I8b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEK4P+wHFyT5p2jS2jEAAAAASUVORK5CYII=";
-
-    return {
-        id: transactionId,
-        status: 'pending',
-        point_of_interaction: {
-            transaction_data: {
-                qr_code: qrCodeCopyPaste,
-                qr_code_base64: qrCodeBase64,
-            },
-        },
-    };
 };
+// --- FIM DA SIMULAÇÃO DA API DO BACKEND ---
 
+
+// --- Frontend Service (Client) ---
+// Este código permanece no frontend e apenas chama a API simulada.
 
 export const paymentService = {
-  async createPixCharge(amountInUSD: string, creditAmount: number, userId: string): Promise<PixCharge> {
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    if (!accessToken) {
-       const notConfiguredSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="50" font-size="6" text-anchor="middle">Payment system not configured.</text></svg>`;
-       const notConfiguredCharge: PixCharge = {
-           id: 'not-configured',
-           status: 'pending',
-           point_of_interaction: {
-               transaction_data: {
-                   qr_code: 'The payment system is not configured on the server. Please contact support.',
-                   qr_code_base64: btoa(notConfiguredSvg)
-               }
-           }
-       };
-       return notConfiguredCharge;
-    }
+  createPixPayment: (amountInUSD: string, creditAmount: number, userEmail: string) =>
+    serverApi.createPixPayment(amountInUSD, creditAmount, userEmail),
     
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const payingUser = authService.getAllUsers().find(u => u.id === userId);
-    if (!payingUser) throw new Error("User not found for payment.");
+  processCardPayment: (token: string, amount: string, email: string) =>
+    serverApi.processCardPayment(token, amount, email),
 
-    const charge = simulateMercadoPagoApiCall(amountInUSD, payingUser.email);
-    
-    const confirmAt = Date.now() + 10000;
-    pendingTransactions.set(charge.id, { charge, confirmAt, amount: creditAmount, userId });
-    return charge;
-  },
-
-  async createCardPayment(amountInUSD: string, creditAmount: number, userId: string): Promise<CardPaymentResponse> {
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    if (!accessToken) {
-        return { id: 'not-configured', status: 'rejected', message: 'The payment system is not configured on the server.' };
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const transactionId = `card_${Date.now()}`;
-    const allUsers = authService.getAllUsers();
-    const payingUser = allUsers.find(u => u.id === userId);
-    
-    if (!payingUser) throw new Error("User not found for payment.");
-
-    const amountPaid = parseFloat(amountInUSD);
-    
-    if (payingUser.referredBy) {
-        const affiliate = allUsers.find(u => u.affiliateId === payingUser.referredBy);
-        if (affiliate && affiliate.commissionRate) {
-            const commission = amountPaid * affiliate.commissionRate;
-            affiliate.commissionEarned = (affiliate.commissionEarned || 0) + commission;
-            authService.updateUser(affiliate);
-            
-            mockTransactionDb.push({
-                id: transactionId, userId: payingUser.id, amountPaid,
-                creditsPurchased: creditAmount, timestamp: Date.now(),
-                affiliateId: affiliate.affiliateId, commissionPaid: commission,
-            });
-        }
-    } else {
-         mockTransactionDb.push({
-            id: transactionId, userId: payingUser.id, amountPaid,
-            creditsPurchased: creditAmount, timestamp: Date.now(),
-         });
-    }
-
-    return { id: transactionId, status: 'approved', message: 'Payment successful!' };
-  },
-
-  async getPaymentStatus(transactionId: string): Promise<{ status: PaymentStatus, amount: number }> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const tx = pendingTransactions.get(transactionId);
-    if (!tx) throw new Error("Transaction not found.");
-
-    if (Date.now() >= tx.confirmAt && tx.charge.status === 'pending') {
-      tx.charge.status = 'paid';
-      
-      const allUsers = authService.getAllUsers();
-      const payingUser = allUsers.find(u => u.id === tx.userId);
-      const amountPaid = parseFloat(tx.charge.point_of_interaction.transaction_data.qr_code.match(/54\d{2}([\d.]+)/)![1]);
-      
-      if (payingUser && payingUser.referredBy) {
-          const affiliate = allUsers.find(u => u.affiliateId === payingUser.referredBy);
-          if (affiliate && affiliate.commissionRate) {
-              const commission = amountPaid * affiliate.commissionRate;
-              
-              affiliate.commissionEarned = (affiliate.commissionEarned || 0) + commission;
-              authService.updateUser(affiliate);
-              
-              mockTransactionDb.push({
-                  id: transactionId, userId: payingUser.id, amountPaid,
-                  creditsPurchased: tx.amount, timestamp: Date.now(),
-                  affiliateId: affiliate.affiliateId, commissionPaid: commission,
-              });
-          }
-      } else if (payingUser) {
-           mockTransactionDb.push({
-              id: transactionId, userId: payingUser.id, amountPaid,
-              creditsPurchased: tx.amount, timestamp: Date.now(),
-           });
-      }
-      return { status: 'paid', amount: tx.amount };
-    }
-    return { status: 'pending', amount: 0 };
-  },
-
-  getAllTransactions(): Transaction[] {
-      return mockTransactionDb;
-  },
+  // Estas funções permanecem para a demonstração do painel de administração.
+  getAllTransactions: () =>
+    serverApi.getAllTransactions(),
   
-  getTotalRevenue(): number {
-      return mockTransactionDb.reduce((sum, tx) => sum + tx.amountPaid, 0);
-  }
+  getTotalRevenue: () =>
+    serverApi.getTotalRevenue()
 };

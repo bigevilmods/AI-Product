@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User } from '../types';
 import { authService, UserCredentials } from '../services/authService';
@@ -16,7 +15,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+// FIX: Refactored props to a dedicated type to improve readability and resolve a potential type inference issue.
+type AuthProviderProps = {
+  children: ReactNode;
+};
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -45,6 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       const updatedUser = { ...user, credits: user.credits + amount };
       setUser(updatedUser);
+      // Persist change to the "backend"
       authService.updateUser(updatedUser); 
     }
   };
@@ -53,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if(user && user.credits >= amount) {
           const updatedUser = { ...user, credits: user.credits - amount };
           setUser(updatedUser);
+          // Persist change to the "backend"
           authService.updateUser(updatedUser);
       }
   }

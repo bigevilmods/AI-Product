@@ -365,7 +365,7 @@ export const generateImage = async (prompt: string, numberOfImages: number, mode
   }
 };
 
-export const generateVideo = async (prompt: string, model: VideoModel, aspectRatio: '9:16' | '16:9'): Promise<string> => {
+export const generateVideo = async (prompt: string, model: VideoModel, aspectRatio: '9:16' | '16:9', durationInSeconds: number, startImage: ImageFile | null = null): Promise<string> => {
   try {
     if (model !== 'gemini-veo') {
       throw new Error(`Model '${model}' is not supported for video generation yet.`);
@@ -374,15 +374,28 @@ export const generateVideo = async (prompt: string, model: VideoModel, aspectRat
     const ai = getGoogleGenAI();
     const apiKey = getEffectiveApiKey();
 
-    let operation = await ai.models.generateVideos({
+    // Defensively clamp and round the duration to ensure it's a valid integer.
+    const clampedDuration = Math.round(Math.max(4, Math.min(8, durationInSeconds)));
+
+    const payload: any = {
       model: 'veo-3.1-fast-generate-preview',
       prompt: prompt,
       config: {
         numberOfVideos: 1,
         resolution: '720p',
-        aspectRatio: aspectRatio
+        aspectRatio: aspectRatio,
+        durationSeconds: clampedDuration
       }
-    });
+    };
+    
+    if (startImage) {
+        payload.image = {
+            imageBytes: startImage.base64,
+            mimeType: startImage.mimeType,
+        };
+    }
+
+    let operation = await ai.models.generateVideos(payload);
 
     while (!operation.done) {
       await new Promise(resolve => setTimeout(resolve, 10000));
@@ -390,8 +403,15 @@ export const generateVideo = async (prompt: string, model: VideoModel, aspectRat
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+
+    // Improved error handling for when video generation completes without a link
     if (!downloadLink) {
-        throw new Error("Video generation completed, but no download link was found.");
+        if (operation.error) {
+            const errorMessage = (operation.error as any)?.message || JSON.stringify(operation.error);
+            throw new Error(`Video generation failed: ${errorMessage}`);
+        }
+        // Provide a more helpful message for the user.
+        throw new Error("Video generation completed, but the API did not return a video. This may be due to safety filters. Please try modifying your prompt.");
     }
     
     const response = await fetch(`${downloadLink}&key=${apiKey}`);

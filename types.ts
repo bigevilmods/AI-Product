@@ -36,26 +36,6 @@ export interface Transaction {
     commissionPaid?: number; // The amount of commission paid
 }
 
-
-export type PaymentStatus = 'pending' | 'paid';
-
-export interface PixCharge {
-  id: string; // transactionId from Mercado Pago
-  status: PaymentStatus;
-  point_of_interaction: {
-    transaction_data: {
-      qr_code: string; // copyPasteCode
-      qr_code_base64: string; // The QR code image as a base64 string
-    };
-  };
-}
-
-export interface CardPaymentResponse {
-  id: string;
-  status: 'approved' | 'rejected';
-  message: string;
-}
-
 export type ImageModel = 'imagen-4.0-generate-001' | 'nano-banana' | 'grok-imagine';
 export type VideoModel = 'gemini-veo' | 'openai-sora' | 'openai-sora-2';
 export type AspectRatio = '1:1' | '9:16' | '16:9' | '4:3' | '3:4';
@@ -75,6 +55,7 @@ declare global {
     }
     interface Window {
         aistudio?: AIStudio;
+        MercadoPago: any;
     }
 }
 // FIX: Moved AppView and AppMode to this central types file to resolve circular dependencies.

@@ -79,7 +79,7 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
         </div>
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
+            {features.map((feature) => (
                 <button
                     key={feature.mode}
                     onClick={() => navigateTo(feature.mode)}
@@ -91,7 +91,7 @@ const HomePage: React.FC<HomePageProps> = ({ navigateTo }) => {
                     <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
                     <p className="text-sm text-slate-400">{feature.description}</p>
                 </button>
-            )).sort(() => 0.5 - Math.random()).slice(0, 6) /* Show 6 random items */}
+            ))}
         </div>
     </>
   );

@@ -1,8 +1,13 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { SparklesIcon, LoadingSpinnerIcon } from '../components/icons';
+import { LoadingSpinnerIcon, XIcon } from '../components/icons';
 
-const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  onClose: () => void;
+}
+
+const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('user@demo.com');
   const [password, setPassword] = useState('password');
@@ -15,6 +20,7 @@ const LoginPage: React.FC = () => {
     setError('');
     try {
       await login({ email, password });
+      onClose(); // Close modal on successful login
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
@@ -23,17 +29,31 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4">
-      <div className="text-center mb-8">
-          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-            AI Video Prompt Generator
-          </h1>
-          <p className="mt-2 text-lg text-slate-400">
-            Login to continue
-          </p>
-      </div>
-      <div className="w-full max-w-sm">
+    <div 
+        className="fixed inset-0 bg-black/70 flex flex-col justify-center items-center p-4 z-[100]"
+        onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-sm relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-8">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+              Welcome Back
+            </h1>
+            <p className="mt-2 text-lg text-slate-400">
+              Login to continue
+            </p>
+        </div>
         <form onSubmit={handleSubmit} className="bg-slate-800 shadow-2xl rounded-lg px-8 pt-6 pb-8 mb-4">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="absolute top-2 right-2 text-slate-500 hover:text-white transition-colors"
+            aria-label="Close login modal"
+          >
+            <XIcon className="w-6 h-6" />
+          </button>
           <div className="mb-4">
             <label className="block text-slate-300 text-sm font-bold mb-2" htmlFor="email">
               Email

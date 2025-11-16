@@ -30,3 +30,16 @@ export interface PixCharge {
 
 export type ImageModel = 'imagen-4.0-generate-001' | 'nano-banana' | 'grok-imagine';
 export type VideoModel = 'gemini-veo' | 'openai-sora' | 'openai-sora-2';
+
+// FIX: To resolve "Subsequent property declarations" TypeScript error, the AIStudio
+// interface and window augmentation are defined here, creating a single global
+// source of truth.
+declare global {
+    interface AIStudio {
+        hasSelectedApiKey: () => Promise<boolean>;
+        openSelectKey: () => Promise<void>;
+    }
+    interface Window {
+        aistudio?: AIStudio;
+    }
+}

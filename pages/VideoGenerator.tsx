@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { generateVideo } from '../services/geminiService';
@@ -6,15 +7,12 @@ import { SparklesIcon, LoadingSpinnerIcon, UserIcon } from '../components/icons'
 import ModelSelector from '../components/ModelSelector';
 import type { VideoModel } from '../types';
 
-// FIX: Resolved a TypeScript error regarding subsequent property declarations for 'aistudio' on the global Window object.
-// The named 'AIStudio' interface was replaced with an inline, anonymous type to prevent potential naming collisions across the project.
-declare global {
-    interface Window {
-        aistudio?: {
-            hasSelectedApiKey: () => Promise<boolean>;
-            openSelectKey: () => Promise<void>;
-        };
-    }
+// FIX: The AIStudio interface and window augmentation were moved to `types.ts`
+// to create a single source of truth for this global type and resolve a
+// "Subsequent property declarations" TypeScript error.
+
+interface VideoGeneratorProps {
+  requestLogin?: () => void;
 }
 
 const loadingMessages = [
@@ -33,7 +31,7 @@ const videoModels = [
     { id: 'openai-sora-2', name: 'Sora 2', description: 'Coming soon.', disabled: true },
 ];
 
-const VideoGenerator: React.FC = () => {
+const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
   const { user, spendCredit } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
@@ -94,13 +92,18 @@ const VideoGenerator: React.FC = () => {
   };
 
   const handleGenerateVideo = useCallback(async () => {
+    if (!user) {
+      requestLogin?.();
+      return;
+    }
+
     if (!prompt.trim()) {
       setError('Please enter a prompt to generate a video.');
       return;
     }
     
     const creditCost = 5;
-    if (user && user.credits < creditCost) {
+    if (user.credits < creditCost) {
       setError(`You need ${creditCost} credits to generate a video. Please buy more credits.`);
       return;
     }
@@ -124,7 +127,7 @@ const VideoGenerator: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, user, spendCredit, selectedModel, isVEOSelected]);
+  }, [prompt, user, spendCredit, selectedModel, isVEOSelected, requestLogin]);
   
   if (isVEOSelected && !apiKeySelected) {
       return (
@@ -165,7 +168,7 @@ const VideoGenerator: React.FC = () => {
         <div className="flex justify-center">
           <button
             onClick={handleGenerateVideo}
-            disabled={!prompt.trim() || isLoading || (user?.credits ?? 0) < 5 || selectedModelInfo?.disabled}
+            disabled={!prompt.trim() || isLoading || selectedModelInfo?.disabled}
             className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (

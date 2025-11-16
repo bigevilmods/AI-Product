@@ -10,6 +10,7 @@ type AppMode = 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' 
 
 interface MainAppProps {
   mode: AppMode;
+  requestLogin: () => void;
 }
 
 const modeConfig = {
@@ -35,7 +36,7 @@ const modeConfig = {
   }
 };
 
-const MainApp: React.FC<MainAppProps> = ({ mode }) => {
+const MainApp: React.FC<MainAppProps> = ({ mode, requestLogin }) => {
   const currentMode = modeConfig[mode] || modeConfig.influencer;
   
   const getTitle = () => {
@@ -45,6 +46,9 @@ const MainApp: React.FC<MainAppProps> = ({ mode }) => {
           default: return 'AI Video Prompt Generator';
       }
   }
+  
+  // Clone the component to pass down the requestLogin prop
+  const componentWithProps = React.cloneElement(currentMode.component, { requestLogin });
 
   return (
     <>
@@ -58,7 +62,7 @@ const MainApp: React.FC<MainAppProps> = ({ mode }) => {
       </header>
 
       <main className="flex flex-col gap-8">
-        {currentMode.component}
+        {componentWithProps}
       </main>
     </>
   );

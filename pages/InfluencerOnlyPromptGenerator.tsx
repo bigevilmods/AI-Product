@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { ImageUploader } from '../components/ImageUploader';
 import { PromptDisplay } from '../components/PromptDisplay';
@@ -7,7 +8,11 @@ import type { ImageFile, ConsistencyResult, LanguageCode } from '../types';
 import { UploadIcon, SparklesIcon, LoadingSpinnerIcon, ShieldCheckIcon } from '../components/icons';
 import { useAuth } from '../context/AuthContext';
 
-const InfluencerOnlyPromptGenerator: React.FC = () => {
+interface InfluencerOnlyPromptGeneratorProps {
+  requestLogin?: () => void;
+}
+
+const InfluencerOnlyPromptGenerator: React.FC<InfluencerOnlyPromptGeneratorProps> = ({ requestLogin }) => {
   const { user, spendCredit } = useAuth();
   const [influencerImage, setInfluencerImage] = useState<ImageFile | null>(null);
   const [actions, setActions] = useState<string>('');
@@ -20,12 +25,17 @@ const InfluencerOnlyPromptGenerator: React.FC = () => {
   const [consistencyResult, setConsistencyResult] = useState<ConsistencyResult | null>(null);
 
   const handleGeneratePrompt = useCallback(async () => {
+    if (!user) {
+      requestLogin?.();
+      return;
+    }
+
     if (!influencerImage || !actions.trim()) {
       setError('Please upload an influencer image and describe the actions.');
       return;
     }
     
-    if (user && user.credits < 1) {
+    if (user.credits < 1) {
         setError("You don't have enough credits to generate a prompt. Please buy more credits.");
         return;
     }
@@ -45,10 +55,15 @@ const InfluencerOnlyPromptGenerator: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [influencerImage, actions, language, user, spendCredit]);
+  }, [influencerImage, actions, language, user, spendCredit, requestLogin]);
   
   const handleTestConsistency = useCallback(async () => {
     if (!generatedPrompt) return;
+    
+    if (!user) {
+      requestLogin?.();
+      return;
+    }
 
     setIsTestingConsistency(true);
     setConsistencyResult(null);
@@ -63,7 +78,7 @@ const InfluencerOnlyPromptGenerator: React.FC = () => {
     } finally {
       setIsTestingConsistency(false);
     }
-  }, [generatedPrompt]);
+  }, [generatedPrompt, user, requestLogin]);
 
   return (
     <>
@@ -112,7 +127,7 @@ const InfluencerOnlyPromptGenerator: React.FC = () => {
       <div className="flex justify-center">
         <button
           onClick={handleGeneratePrompt}
-          disabled={!influencerImage || !actions.trim() || isLoading || (user?.credits ?? 0) < 1}
+          disabled={!influencerImage || !actions.trim() || isLoading}
           className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (

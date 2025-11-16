@@ -7,13 +7,17 @@ import FullscreenImageViewer from '../components/FullscreenImageViewer';
 import ModelSelector from '../components/ModelSelector';
 import type { ImageModel } from '../types';
 
+interface ImageGeneratorProps {
+  requestLogin?: () => void;
+}
+
 const imageModels = [
     { id: 'imagen-4.0-generate-001', name: 'Imagen 4.0', description: 'Highest quality images, supports multiple generations.' },
     { id: 'nano-banana', name: 'Nano Banana', description: 'Fast, efficient, single image generation.' },
     { id: 'grok-imagine', name: 'Grok Imagine', description: 'Coming soon.', disabled: true },
 ];
 
-const ImageGenerator: React.FC = () => {
+const ImageGenerator: React.FC<ImageGeneratorProps> = ({ requestLogin }) => {
   const { user, spendCredit } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -27,12 +31,17 @@ const ImageGenerator: React.FC = () => {
   const currentCreditCost = isNanoBanana ? 1 : numberOfImages;
 
   const handleGenerateImage = useCallback(async () => {
+    if (!user) {
+      requestLogin?.();
+      return;
+    }
+
     if (!prompt.trim()) {
       setError('Please enter a prompt to generate an image.');
       return;
     }
     
-    if (user && user.credits < currentCreditCost) {
+    if (user.credits < currentCreditCost) {
       setError(`You need ${currentCreditCost} credit${currentCreditCost > 1 ? 's' : ''} for this generation. Please buy more credits.`);
       return;
     }
@@ -52,7 +61,7 @@ const ImageGenerator: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, user, spendCredit, selectedModel, currentCreditCost]);
+  }, [prompt, user, spendCredit, selectedModel, currentCreditCost, requestLogin]);
 
   return (
     <>
@@ -97,7 +106,7 @@ const ImageGenerator: React.FC = () => {
         <div className="flex justify-center">
           <button
             onClick={handleGenerateImage}
-            disabled={!prompt.trim() || isLoading || (user?.credits ?? 0) < currentCreditCost}
+            disabled={!prompt.trim() || isLoading}
             className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (

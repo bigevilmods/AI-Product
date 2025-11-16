@@ -1,12 +1,15 @@
 
+
 import React from 'react';
 import InfluencerPromptGenerator from './pages/InfluencerPromptGenerator';
 import ProductAdPromptGenerator from './pages/ProductAdPromptGenerator';
 import InfluencerOnlyPromptGenerator from './pages/InfluencerOnlyPromptGenerator';
 import ImageGenerator from './pages/ImageGenerator';
 import VideoGenerator from './pages/VideoGenerator';
-
-type AppMode = 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator';
+import StoryboardGenerator from './pages/StoryboardGenerator';
+import TextToSpeechGenerator from './pages/TextToSpeechGenerator';
+// FIX: To break a circular dependency, the AppMode type is now imported from a central types file.
+import type { AppMode } from './types';
 
 interface MainAppProps {
   mode: AppMode;
@@ -33,6 +36,14 @@ const modeConfig = {
   videoGenerator: {
     title: 'Generate a stunning video from a text prompt.',
     component: <VideoGenerator />,
+  },
+  storyboardGenerator: {
+    title: 'Create a video from a storyboard.',
+    component: <StoryboardGenerator />,
+  },
+  textToSpeechGenerator: {
+    title: 'Convert your text into high-quality spoken audio.',
+    component: <TextToSpeechGenerator />,
   }
 };
 
@@ -43,6 +54,8 @@ const MainApp: React.FC<MainAppProps> = ({ mode, requestLogin }) => {
       switch(mode) {
           case 'imageGenerator': return 'AI Image Generator';
           case 'videoGenerator': return 'AI Video Generator';
+          case 'storyboardGenerator': return 'AI Storyboard Generator';
+          case 'textToSpeechGenerator': return 'AI Text-to-Speech Generator';
           default: return 'AI Video Prompt Generator';
       }
   }

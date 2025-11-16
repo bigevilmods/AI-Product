@@ -84,7 +84,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
             <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
               {mode === 'login' ? 'Welcome Back' : 'Create Account'}
             </h1>
-            <p className="mt-2 text-md text-slate-400">
+            <p className="mt-2 text-base text-slate-400">
               {mode === 'login' ? 'Login to continue' : 'Get started with 5 free credits!'}
             </p>
           </div>
@@ -94,7 +94,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               Email
             </label>
             <input
-              className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-purple-500"
+              className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500"
               id="email"
               type="email"
               placeholder="seu@email.com"
@@ -108,7 +108,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               Password
             </label>
             <input
-              className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 bg-slate-700 text-white mb-3 leading-tight focus:outline-none focus:shadow-outline focus:border-purple-500"
+              className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500"
               id="password"
               type="password"
               placeholder="******************"
@@ -116,17 +116,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-             {error && <p className="text-red-500 text-xs italic">{error}</p>}
+             {error && <p className="text-red-500 text-xs italic mt-2">{error}</p>}
           </div>
           <div className="flex items-center justify-between">
             <button
-              className="inline-flex items-center justify-center w-full px-4 py-3 font-bold text-white transition-all duration-200 bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-purple-500 disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center px-4 py-2 font-bold text-white transition-all duration-200 bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-purple-500 disabled:opacity-50"
               type="submit"
               disabled={isLoading}
             >
               {isLoading ? (
                   <>
-                    <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                    <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
                     {mode === 'login' ? 'Signing In...' : 'Registering...'}
                   </>
               ) : (
@@ -136,7 +136,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
           </div>
           {mode === 'login' && (
             <div className="text-center mt-6 text-xs text-slate-500">
-              <p>Demo credentials:</p>
+              <p className="mb-1">Demo credentials:</p>
               <p>User: <span className="font-mono">user@demo.com</span> / <span className="font-mono">password</span></p>
               <p>Admin: <span className="font-mono">admin@demo.com</span> / <span className="font-mono">password</span></p>
             </div>

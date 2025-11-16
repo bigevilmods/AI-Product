@@ -78,7 +78,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
     <div className="bg-slate-800 p-6 rounded-lg shadow-md flex flex-col items-center justify-center">
       <h3 className="text-xl font-semibold text-slate-200 mb-4">{title}</h3>
       <label
-        className={`relative w-full h-64 border-2 border-dashed rounded-lg flex flex-col justify-center items-center cursor-pointer transition-colors duration-200 ${isDragging ? 'border-purple-500 bg-slate-700/50' : 'border-slate-600 hover:border-purple-400'}`}
+        className={`relative w-full h-64 border-2 border-dashed border-slate-600 rounded-lg flex flex-col justify-center items-center cursor-pointer transition-colors hover:border-purple-400 ${isDragging ? 'border-purple-500 bg-slate-700/50' : ''}`}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -92,7 +92,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
           onChange={(e) => handleFileChange(e.target.files)}
         />
         {previews.length > 0 ? (
-          <div className={`w-full h-full p-1 grid gap-1 ${previews.length > 1 ? 'grid-cols-2 auto-rows-fr' : 'grid-cols-1'}`}>
+          <div className={`w-full h-full p-1 grid gap-1 ${previews.length > 1 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1'}`}>
             {previews.map((src, index) => (
                 <div key={index} className="relative w-full h-full min-h-0">
                     <img src={src} alt={`Preview ${index + 1}`} className="absolute top-0 left-0 w-full h-full object-contain rounded-md" />
@@ -101,7 +101,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
           </div>
         ) : (
           <div className="text-center text-slate-400">
-            {icon}
+            <div className="w-10 h-10 text-slate-500 mx-auto">{icon}</div>
             <p className="mt-2">Drag & drop or click to upload</p>
           </div>
         )}

@@ -23,12 +23,12 @@ export const PromptDisplay: React.FC<PromptDisplayProps> = ({ prompt }) => {
   };
 
   return (
-    <div className="w-full bg-slate-800 rounded-lg shadow-lg overflow-hidden">
-      <div className="bg-slate-700/50 p-4 flex justify-between items-center">
+    <div className="w-full bg-slate-800 rounded-lg shadow-xl overflow-hidden">
+      <div className="bg-slate-700/50 px-4 py-4 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-slate-200">Generated Prompt</h3>
         <button
           onClick={handleCopy}
-          className="flex items-center px-3 py-1.5 text-sm font-medium bg-slate-600 hover:bg-purple-600 rounded-md transition-colors duration-200"
+          className="flex items-center px-3 py-1.5 text-sm font-medium bg-slate-600 rounded-md text-white hover:bg-purple-600 transition-colors"
         >
           {copied ? (
             <>

@@ -1,101 +1,62 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ImageUploader } from '../components/ImageUploader';
 import { PromptDisplay } from '../components/PromptDisplay';
 import { ConsistencyResultDisplay } from '../components/ConsistencyResultDisplay';
-import { generateProductAdPrompt, testPromptConsistency } from '../services/geminiService';
-import type { ImageFile, ConsistencyResult, LanguageCode } from '../types';
+import { generateProductAdPrompt } from '../services/geminiService';
+import type { ImageFile, LanguageCode } from '../types';
 import { UploadIcon, SparklesIcon, LoadingSpinnerIcon, ShieldCheckIcon } from '../components/icons';
-import { useAuth } from '../context/AuthContext';
+import { usePromptGenerator } from '../hooks/usePromptGenerator';
+import { useConsistencyCheck } from '../hooks/useConsistencyCheck';
 
 interface ProductAdPromptGeneratorProps {
   requestLogin?: () => void;
 }
 
 const ProductAdPromptGenerator: React.FC<ProductAdPromptGeneratorProps> = ({ requestLogin }) => {
-  const { user, spendCredit } = useAuth();
   const [productImages, setProductImages] = useState<ImageFile[] | null>(null);
-  const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState<LanguageCode>('en');
-
-  const [isTestingConsistency, setIsTestingConsistency] = useState<boolean>(false);
-  const [consistencyResult, setConsistencyResult] = useState<ConsistencyResult | null>(null);
-
-  const handleGeneratePrompt = useCallback(async () => {
-    if (!user) {
-      requestLogin?.();
-      return;
-    }
-
-    if (!productImages || productImages.length === 0) {
-      setError('Please upload at least one product image.');
-      return;
-    }
-    
-    if (user.credits < 1) {
-        setError("You don't have enough credits to generate a prompt. Please buy more credits.");
-        return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setGeneratedPrompt('');
-    setConsistencyResult(null);
-
-    try {
-      spendCredit();
-      const prompt = await generateProductAdPrompt(productImages, language);
-      setGeneratedPrompt(prompt);
-    } catch (e) {
-      console.error(e);
-      setError('Failed to generate prompt. Please check the console for details.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [productImages, language, user, spendCredit, requestLogin]);
   
-  const handleTestConsistency = useCallback(async () => {
-    if (!generatedPrompt) return;
+  // FIX: Explicitly provided the generic type for `usePromptGenerator` to correctly type the `args` parameter.
+  const { isLoading, error, generatedPrompt, generate, setError, setGeneratedPrompt } = usePromptGenerator<{
+    productImages: ImageFile[];
+    language: LanguageCode;
+  }>(
+      (args) => generateProductAdPrompt(args.productImages, args.language)
+  );
 
-    if (!user) {
-      requestLogin?.();
-      return;
-    }
+  const { isTesting, result, check, checkError, setResult } = useConsistencyCheck(generatedPrompt);
 
-    setIsTestingConsistency(true);
-    setConsistencyResult(null);
-    setError(null);
-
-    try {
-      const result = await testPromptConsistency(generatedPrompt);
-      setConsistencyResult(result);
-    } catch (e) {
-      console.error(e);
-      setError('Failed to test prompt consistency. Please check the console for details.');
-    } finally {
-      setIsTestingConsistency(false);
-    }
-  }, [generatedPrompt, user, requestLogin]);
+  const handleGeneratePrompt = () => {
+    const validation = () => {
+        if (!productImages || productImages.length === 0) {
+          setError('Please upload at least one product image.');
+          return false;
+        }
+        return true;
+    };
+    setResult(null);
+    // FIX: Pass `requestLogin` to the `generate` function.
+    generate({ productImages, language }, validation, requestLogin);
+  };
 
   return (
     <>
-      <div className="max-w-3xl mx-auto w-full">
+      <div className="max-w-2xl mx-auto w-full">
         <ImageUploader
           title="Product Image(s)"
           onImageUpload={setProductImages}
-          icon={<UploadIcon className="w-10 h-10 text-slate-500" />}
+          icon={<UploadIcon />}
           multiple={true}
         />
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center items-center">
         <div className="relative">
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value as LanguageCode)}
-            className="appearance-none bg-slate-800 border border-slate-700 text-white font-semibold py-2 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-slate-700 focus:border-purple-500 transition-colors duration-200"
+            className="appearance-none bg-slate-800 border border-slate-700 text-white font-semibold py-2 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-slate-700 focus:border-purple-500"
             aria-label="Select voice-over language"
           >
             <option value="en">English</option>
@@ -114,15 +75,15 @@ const ProductAdPromptGenerator: React.FC<ProductAdPromptGeneratorProps> = ({ req
         </div>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center items-center">
         <button
           onClick={handleGeneratePrompt}
           disabled={!productImages || productImages.length === 0 || isLoading}
-          className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-lg hover:bg-gradient-to-br hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
-              <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+              <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
               Generating...
             </>
           ) : (
@@ -134,25 +95,25 @@ const ProductAdPromptGenerator: React.FC<ProductAdPromptGeneratorProps> = ({ req
         </button>
       </div>
 
-      {error && (
-        <div className="text-center p-4 bg-red-900/50 border border-red-500 text-red-300 rounded-lg">
-          <p>{error}</p>
+      {(error || checkError) && (
+        <div className="text-center p-4 bg-red-800/50 border border-red-700 text-red-400 rounded-lg">
+          <p>{error || checkError}</p>
         </div>
       )}
 
       {generatedPrompt && (
-        <div className="space-y-6">
+        <div className="flex flex-col items-center gap-6">
           <PromptDisplay prompt={generatedPrompt} />
 
           <div className="flex flex-col items-center gap-4">
               <button
-                onClick={handleTestConsistency}
-                disabled={isTestingConsistency}
-                className="inline-flex items-center justify-center px-6 py-3 font-semibold text-md text-white transition-all duration-200 bg-slate-700 rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => check(requestLogin)}
+                disabled={isTesting}
+                className="inline-flex items-center justify-center px-6 py-3 font-semibold text-base text-white transition-all duration-200 bg-slate-700 rounded-lg shadow-md hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isTestingConsistency ? (
+                {isTesting ? (
                   <>
-                    <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                    <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
                     Testing...
                   </>
                 ) : (
@@ -163,8 +124,8 @@ const ProductAdPromptGenerator: React.FC<ProductAdPromptGeneratorProps> = ({ req
                 )}
               </button>
 
-              {consistencyResult && (
-                <ConsistencyResultDisplay result={consistencyResult} />
+              {result && (
+                <ConsistencyResultDisplay result={result} />
               )}
           </div>
         </div>

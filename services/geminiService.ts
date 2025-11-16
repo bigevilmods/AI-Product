@@ -1,13 +1,8 @@
 
-import { GoogleGenAI, Type, Modality } from "@google/genai";
-import type { ImageFile, ConsistencyResult, LanguageCode, ImageModel, VideoModel } from '../types';
 
-if (!process.env.API_KEY) {
-    console.warn("API_KEY environment variable not set. Using a placeholder which will likely fail.");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-const model = "gemini-2.5-flash";
+import { Type, Modality } from "@google/genai";
+import { getGoogleGenAI, getEffectiveApiKey } from './api';
+import type { ImageFile, ConsistencyResult, LanguageCode, ImageModel, VideoModel, AspectRatio, StoryboardScene } from '../types';
 
 const fileToGenerativePart = (imageFile: ImageFile) => {
   return {
@@ -90,12 +85,13 @@ export const generateVideoPrompt = async (
   language: LanguageCode
 ): Promise<string> => {
   try {
+    const ai = getGoogleGenAI();
     const influencerPart = fileToGenerativePart(influencerImage);
     const productParts = productImages.map(fileToGenerativePart);
     const promptTemplate = createPromptTemplate(language);
 
     const response = await ai.models.generateContent({
-      model: model,
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           influencerPart,
@@ -167,11 +163,12 @@ export const generateProductAdPrompt = async (
   language: LanguageCode
 ): Promise<string> => {
   try {
+    const ai = getGoogleGenAI();
     const productParts = productImages.map(fileToGenerativePart);
     const promptTemplate = createProductAdPromptTemplate(language);
 
     const response = await ai.models.generateContent({
-      model: model,
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           ...productParts,
@@ -230,11 +227,12 @@ export const generateInfluencerOnlyPrompt = async (
   language: LanguageCode
 ): Promise<string> => {
   try {
+    const ai = getGoogleGenAI();
     const influencerPart = fileToGenerativePart(influencerImage);
     const promptTemplate = createInfluencerOnlyPromptTemplate(actions, language);
     
     const response = await ai.models.generateContent({
-      model: model,
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           influencerPart,
@@ -277,8 +275,9 @@ Check for any ambiguity or creative language in the 'Influencer Details' and 'Pr
 Based on your audit, respond with the specified JSON format indicating if the prompt is consistent and provide a brief reason for your assessment. If inconsistent, point out the specific part of the prompt that is ambiguous. A good prompt is one that leaves no room for creative interpretation on critical features.`;
 
   try {
+     const ai = getGoogleGenAI();
      const response = await ai.models.generateContent({
-      model: model,
+      model: "gemini-2.5-flash",
       contents: `Audit this prompt:\n\n---\n\n${prompt}`,
       config: {
         systemInstruction,
@@ -287,9 +286,10 @@ Based on your audit, respond with the specified JSON format indicating if the pr
       },
     });
 
+    // FIX: The API may wrap the JSON response in markdown. This extracts the JSON before parsing.
     const jsonText = response.text.trim();
-    const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
-    const parsableText = jsonMatch ? jsonMatch[1] : jsonText;
+    const jsonMatch = jsonText.match(/```(json)?\n([\s\S]*?)\n```/);
+    const parsableText = jsonMatch ? jsonMatch[2] : jsonText;
 
     const result = JSON.parse(parsableText);
     return result as ConsistencyResult;
@@ -308,8 +308,9 @@ Based on your audit, respond with the specified JSON format indicating if the pr
   }
 };
 
-export const generateImage = async (prompt: string, numberOfImages: number, model: ImageModel): Promise<string[]> => {
+export const generateImage = async (prompt: string, numberOfImages: number, model: ImageModel, aspectRatio: AspectRatio): Promise<string[]> => {
   try {
+    const ai = getGoogleGenAI();
     switch (model) {
       case 'imagen-4.0-generate-001':
         const responseImagen = await ai.models.generateImages({
@@ -318,7 +319,7 @@ export const generateImage = async (prompt: string, numberOfImages: number, mode
             config: {
               numberOfImages: numberOfImages,
               outputMimeType: 'image/jpeg',
-              aspectRatio: '1:1',
+              aspectRatio: aspectRatio,
             },
         });
 
@@ -364,27 +365,28 @@ export const generateImage = async (prompt: string, numberOfImages: number, mode
   }
 };
 
-export const generateVideo = async (prompt: string, model: VideoModel): Promise<string> => {
+export const generateVideo = async (prompt: string, model: VideoModel, aspectRatio: '9:16' | '16:9'): Promise<string> => {
   try {
     if (model !== 'gemini-veo') {
       throw new Error(`Model '${model}' is not supported for video generation yet.`);
     }
 
-    const localAi = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const ai = getGoogleGenAI();
+    const apiKey = getEffectiveApiKey();
 
-    let operation = await localAi.models.generateVideos({
+    let operation = await ai.models.generateVideos({
       model: 'veo-3.1-fast-generate-preview',
       prompt: prompt,
       config: {
         numberOfVideos: 1,
         resolution: '720p',
-        aspectRatio: '9:16'
+        aspectRatio: aspectRatio
       }
     });
 
     while (!operation.done) {
       await new Promise(resolve => setTimeout(resolve, 10000));
-      operation = await localAi.operations.getVideosOperation({ operation: operation });
+      operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
@@ -392,7 +394,7 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
         throw new Error("Video generation completed, but no download link was found.");
     }
     
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const response = await fetch(`${downloadLink}&key=${apiKey}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch video file: ${response.statusText}`);
     }
@@ -410,4 +412,97 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
     }
     throw new Error("An unknown error occurred while generating the video.");
   }
+};
+
+const storyboardSchema = {
+    type: Type.OBJECT,
+    properties: {
+        scenes: {
+            type: Type.ARRAY,
+            description: "An array of storyboard scenes.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    scene: {
+                        type: Type.INTEGER,
+                        description: "The scene number, starting from 1."
+                    },
+                    description: {
+                        type: Type.STRING,
+                        description: "A detailed description of the scene, including camera angles, character actions, and setting."
+                    },
+                    imagePrompt: {
+                        type: Type.STRING,
+                        description: "A concise, descriptive prompt suitable for an AI image generator to create a visual for this scene."
+                    }
+                },
+                required: ['scene', 'description', 'imagePrompt']
+            }
+        }
+    },
+    required: ['scenes']
+};
+
+
+export const generateStoryboard = async (prompt: string): Promise<StoryboardScene[]> => {
+    const systemInstruction = `You are a creative film director and storyboard artist. Your task is to take a user's high-level video idea and break it down into a structured, 4-scene storyboard. Each scene should logically follow the previous one to create a cohesive narrative. For each scene, you must provide a detailed description and a separate, concise prompt for an AI image generator. The output must be a valid JSON object matching the provided schema.`;
+
+    try {
+        const ai = getGoogleGenAI();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `Generate a 4-scene storyboard for this video idea: "${prompt}"`,
+            config: {
+                systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: storyboardSchema,
+            },
+        });
+
+        const jsonText = response.text.trim();
+        const jsonMatch = jsonText.match(/```(json)?\n([\s\S]*?)\n```/);
+        const parsableText = jsonMatch ? jsonMatch[2] : jsonText;
+        const result = JSON.parse(parsableText);
+
+        if (result && result.scenes) {
+            return result.scenes as StoryboardScene[];
+        }
+        throw new Error("Invalid storyboard format received from API.");
+    } catch (error) {
+        console.error("Error generating storyboard:", error);
+        if (error instanceof Error) {
+            throw new Error(`An error occurred while generating the storyboard: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating the storyboard.");
+    }
+};
+
+export const generateSpeech = async (prompt: string, voiceName: string): Promise<string> => {
+    try {
+        const ai = getGoogleGenAI();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: voiceName },
+                    },
+                },
+            },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) {
+            throw new Error("API did not return audio data.");
+        }
+        return base64Audio;
+    } catch (error) {
+        console.error("Error generating speech with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`An error occurred while generating speech: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating speech.");
+    }
 };

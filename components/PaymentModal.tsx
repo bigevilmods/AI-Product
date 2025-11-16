@@ -169,7 +169,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
               <div className="w-48 h-48 rounded-lg bg-white p-2">
                 <img src={pixCharge?.qrCodeDataUrl} alt="PIX QR Code" className="w-full h-full" />
               </div>
-              <div className="text-center text-slate-300 font-semibold">
+              <div className="text-center text-slate-300 font-semibold flex items-center">
                 <LoadingSpinnerIcon className="inline w-4 h-4 mr-2 animate-spin" />
                 Aguardando pagamento...
               </div>
@@ -184,7 +184,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
              <div className="p-6 bg-slate-900/50 rounded-b-lg flex justify-end gap-4">
-                <button onClick={onClose} className="px-4 py-2 font-semibold text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
+                <button onClick={onClose} className="px-4 py-2 font-semibold bg-slate-600 hover:bg-slate-500 rounded-md">Cancel</button>
             </div>
           </>
         );
@@ -192,10 +192,11 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
       default:
         return (
           <>
-            <div className="p-6 border-b border-slate-700">
+            <div className="p-6 pb-0 border-b-0">
                 <h2 className="text-2xl font-bold text-white">Buy Credits</h2>
-                <p className="text-slate-400">Select an option to add credits to your account.</p>
             </div>
+            <p className="text-slate-400 px-6">Select an option to add credits to your account.</p>
+            
             <div className="p-6">
                 <div className="flex gap-1 bg-slate-700/50 p-1 rounded-lg">
                     <TabButton tab="packages">Pacotes</TabButton>
@@ -255,8 +256,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
                 </div>
             </div>
             <div className="p-6 bg-slate-900/50 rounded-b-lg flex justify-end gap-4">
-                <button onClick={onClose} className="px-4 py-2 font-semibold text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
-                <button onClick={handleCreatePix} className="px-4 py-2 font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-500">
+                <button onClick={onClose} className="px-4 py-2 font-semibold bg-slate-600 hover:bg-slate-500 rounded-md">Cancel</button>
+                <button onClick={handleCreatePix} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md">
                     Pay R$ {getPrice()} with PIX
                 </button>
             </div>
@@ -269,7 +270,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
         {renderContent()}
       </div>
     </div>

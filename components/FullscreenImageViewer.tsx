@@ -13,17 +13,9 @@ const FullscreenImageViewer: React.FC<FullscreenImageViewerProps> = ({ src, onCl
       className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-fade-in" 
       onClick={onClose}
     >
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
-        }
-      `}</style>
+      <style>{`.animate-fade-in { animation: fadeIn 0.2s ease-out; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
       <button 
-        className="absolute top-4 right-4 text-white hover:text-gray-300 z-10 transition-transform duration-200 hover:scale-110"
+        className="absolute top-4 right-4 text-white z-10 hover:scale-110 transition-transform"
         onClick={onClose}
         aria-label="Close fullscreen view"
       >

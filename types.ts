@@ -1,4 +1,5 @@
 
+
 export interface ImageFile {
   base64: string;
   mimeType: string;
@@ -47,6 +48,15 @@ export interface PixCharge {
 
 export type ImageModel = 'imagen-4.0-generate-001' | 'nano-banana' | 'grok-imagine';
 export type VideoModel = 'gemini-veo' | 'openai-sora' | 'openai-sora-2';
+export type AspectRatio = '1:1' | '9:16' | '16:9' | '4:3' | '3:4';
+
+export interface StoryboardScene {
+  scene: number;
+  description: string;
+  imagePrompt: string;
+  imageUrl?: string;
+  isGeneratingImage?: boolean;
+}
 
 declare global {
     interface AIStudio {
@@ -57,3 +67,6 @@ declare global {
         aistudio?: AIStudio;
     }
 }
+// FIX: Moved AppView and AppMode to this central types file to resolve circular dependencies.
+export type AppView = 'home' | 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator' | 'storyboardGenerator' | 'textToSpeechGenerator' | 'admin' | 'affiliate';
+export type AppMode = 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator' | 'storyboardGenerator' | 'textToSpeechGenerator';

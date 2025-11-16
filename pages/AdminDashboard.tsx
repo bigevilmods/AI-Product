@@ -137,11 +137,7 @@ const AdminDashboard: React.FC = () => {
       return (
           <button
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 text-sm font-semibold transition-colors
-                  ${isActive 
-                      ? 'border-b-2 border-purple-400 text-white' 
-                      : 'border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-500'
-                  }`}
+              className={`py-4 px-1 text-sm font-semibold border-b-2 transition-colors ${isActive ? 'border-purple-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-600'}`}
           >
               {children}
           </button>
@@ -152,7 +148,7 @@ const AdminDashboard: React.FC = () => {
   if (user?.role !== 'admin') return <div className="text-center p-10 text-red-400">Access Denied.</div>;
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-8">
       <div className="border-b border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <TabButton tab="management">Gerenciamento</TabButton>
@@ -161,53 +157,53 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {activeTab === 'management' && (
-        <div className="space-y-8">
-            <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
+        <div className="flex flex-col gap-8">
+            <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
                 <h2 className="text-3xl font-bold text-white mb-6">Gerenciamento de Usuários</h2>
                 <div className="overflow-x-auto">
                 <table className="min-w-full bg-slate-800 rounded-md">
                     <thead>
-                    <tr className="bg-slate-700">
-                        <th className="py-3 px-4 text-left uppercase font-semibold text-sm text-slate-300">Email</th>
-                        <th className="py-3 px-4 text-left uppercase font-semibold text-sm text-slate-300">Função</th>
-                        <th className="py-3 px-4 text-left uppercase font-semibold text-sm text-slate-300">Afiliado ID</th>
-                        <th className="py-3 px-4 text-center uppercase font-semibold text-sm text-slate-300">Comissão (%)</th>
-                        <th className="py-3 px-4 text-right uppercase font-semibold text-sm text-slate-300">Créditos</th>
-                        <th className="py-3 px-4 text-center uppercase font-semibold text-sm text-slate-300">Ações</th>
+                    <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tl-md">Email</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Função</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Afiliado ID</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Comissão (%)</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Créditos</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Ações</th>
                     </tr>
                     </thead>
-                    <tbody className="text-slate-200">
+                    <tbody className="divide-y divide-slate-700">
                     {users.map((u) => (
-                        <tr key={u.id} className="border-b border-slate-700 hover:bg-slate-700/50">
-                        <td className="py-3 px-4">{u.email}</td>
-                        <td className="py-3 px-4">
-                            <select value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)} className="bg-slate-700 border border-slate-600 rounded-md p-1 text-xs">
+                        <tr key={u.id} className="hover:bg-slate-700/30">
+                        <td className="px-4 py-3 text-sm text-slate-200">{u.email}</td>
+                        <td className="px-4 py-3">
+                            <select value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)} className="bg-slate-700 border border-slate-600 rounded-md py-1 px-2 text-sm focus:ring-purple-500 focus:border-purple-500">
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                             <option value="influencer">Influencer</option>
                             <option value="affiliate">Affiliate</option>
                             </select>
                         </td>
-                        <td className="py-3 px-4 font-mono text-xs">{u.affiliateId || 'N/A'}</td>
-                        <td className="py-3 px-4">
+                        <td className="px-4 py-3 text-sm font-mono text-slate-400">{u.affiliateId || 'N/A'}</td>
+                        <td className="px-4 py-3">
                             {u.role === 'affiliate' && (
                             <div className="flex items-center justify-center gap-2">
                                 <input
                                 type="number"
                                 value={commissionInputs[u.id] || ''}
                                 onChange={(e) => handleCommissionChange(u.id, e.target.value)}
-                                className="w-16 bg-slate-700 border border-slate-600 rounded-md p-1 text-xs text-center"
+                                className="w-16 bg-slate-700 border border-slate-600 rounded-md p-1 text-center text-sm"
                                 placeholder="%"
                                 />
-                                <button onClick={() => handleSetCommission(u.id)} className="px-2 py-1 text-xs bg-purple-600 rounded hover:bg-purple-500">Set</button>
+                                <button onClick={() => handleSetCommission(u.id)} className="px-2 py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-500 rounded text-white">Set</button>
                             </div>
                             )}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-amber-400">{u.credits}</td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="px-4 py-3 text-right text-sm font-bold text-amber-400">{u.credits}</td>
+                        <td className="px-4 py-3 text-center">
                             {u.role === 'influencer' && (
-                            <button onClick={() => setIsGrantingCredits(u)} className="p-2 rounded-full hover:bg-slate-600" title="Grant Credits">
-                                <GiftIcon className="w-5 h-5 text-green-400"/>
+                            <button onClick={() => setIsGrantingCredits(u)} className="p-2 rounded-full hover:bg-slate-700" title="Grant Credits">
+                                <GiftIcon className="w-5 h-5 text-green-400" />
                             </button>
                             )}
                         </td>
@@ -218,25 +214,25 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
             <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-2xl font-bold text-white mb-6">Payment Settings</h2>
-                    <div className="max-w-md">
-                    <label htmlFor="pixKey" className="block text-slate-300 text-sm font-bold mb-2">Your PIX Key</label>
-                    <input id="pixKey" type="text" value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="Enter your CPF, CNPJ, email, or phone number" className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-purple-500" />
+                <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
+                    <h2 className="text-2xl font-bold text-white mb-4">Payment Settings</h2>
+                    <div>
+                    <label htmlFor="pixKey" className="block text-sm font-medium text-slate-300 mb-2">Your PIX Key</label>
+                    <input id="pixKey" type="text" value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="Enter your CPF, CNPJ, email, or phone number" className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" />
                     <p className="text-xs text-slate-500 mt-2">This key will be used to generate real PIX charges for users. It is stored securely in your browser's local storage and is never shared.</p>
-                    <div className="mt-4"><button onClick={handleSavePixKey} className="px-4 py-2 font-semibold text-sm bg-purple-600 text-white rounded-md hover:bg-purple-500 transition-colors duration-200 disabled:opacity-50" disabled={!pixKey}>{saveStatus === 'success' ? 'Saved!' : 'Save PIX Key'}</button></div>
+                    <div className="mt-4"><button onClick={handleSavePixKey} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md text-sm" disabled={!pixKey}>{saveStatus === 'success' ? 'Saved!' : 'Save PIX Key'}</button></div>
                     </div>
                 </div>
-                <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-2xl font-bold text-white mb-6">Global Notification</h2>
-                    <div className="max-w-xl">
-                    <label htmlFor="notificationMessage" className="block text-slate-300 text-sm font-bold mb-2">Notification Message</label>
-                    <textarea id="notificationMessage" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} placeholder="Announce a new feature or maintenance..." rows={3} className="shadow appearance-none border border-slate-700 rounded w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:shadow-outline focus:border-purple-500" />
+                <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
+                    <h2 className="text-2xl font-bold text-white mb-4">Global Notification</h2>
+                    <div>
+                    <label htmlFor="notificationMessage" className="block text-sm font-medium text-slate-300 mb-2">Notification Message</label>
+                    <textarea id="notificationMessage" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} placeholder="Announce a new feature or maintenance..." rows={3} className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y" />
                     <p className="text-xs text-slate-500 mt-2">This message will be displayed in a banner at the top of the site for all users.</p>
                     {currentNotification && (<div className="mt-4 p-3 bg-slate-900/50 rounded-md"><p className="text-xs text-slate-400">Current active notification:</p><p className="text-sm text-slate-200">{currentNotification}</p></div>)}
                     <div className="mt-4 flex gap-4">
-                        <button onClick={handlePublishNotification} className="px-4 py-2 font-semibold text-sm bg-purple-600 text-white rounded-md hover:bg-purple-500 transition-colors duration-200 disabled:opacity-50" disabled={!notificationMessage.trim()}>Publish</button>
-                        <button onClick={handleClearNotification} className="px-4 py-2 font-semibold text-sm bg-red-600 text-white rounded-md hover:bg-red-500 transition-colors duration-200" disabled={!currentNotification}>Clear</button>
+                        <button onClick={handlePublishNotification} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md text-sm" disabled={!notificationMessage.trim()}>Publish</button>
+                        <button onClick={handleClearNotification} className="px-4 py-2 font-semibold bg-red-600 hover:bg-red-500 rounded-md text-sm" disabled={!currentNotification}>Clear</button>
                     </div>
                     </div>
                 </div>
@@ -245,41 +241,41 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'analytics' && (
-        <div className="space-y-8">
-            <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
+        <div className="flex flex-col gap-8">
+            <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
                 <h2 className="text-sm text-slate-400">Receita Total do Site</h2>
                 <p className="text-4xl font-bold text-green-400">
                     {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
             </div>
-            <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
+            <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
                 <h2 className="text-2xl font-bold text-white mb-6">Desempenho dos Afiliados</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full bg-slate-800 rounded-md">
                         <thead>
-                            <tr className="bg-slate-700">
-                                <th className="py-3 px-4 text-left uppercase font-semibold text-sm text-slate-300">Afiliado</th>
-                                <th className="py-3 px-4 text-center uppercase font-semibold text-sm text-slate-300">Indicados</th>
-                                <th className="py-3 px-4 text-right uppercase font-semibold text-sm text-slate-300">Receita Gerada</th>
-                                <th className="py-3 px-4 text-right uppercase font-semibold text-sm text-slate-300">Comissão Paga</th>
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tl-md">Afiliado</th>
+                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Indicados</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Receita Gerada</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Comissão Paga</th>
                             </tr>
                         </thead>
-                        <tbody className="text-slate-200">
+                        <tbody className="divide-y divide-slate-700">
                             {stats.map(stat => (
-                                <tr key={stat.affiliate.id} className="border-b border-slate-700 hover:bg-slate-700/50">
-                                    <td className="py-3 px-4">{stat.affiliate.email}</td>
-                                    <td className="py-3 px-4 text-center font-mono">{stat.referrals}</td>
-                                    <td className="py-3 px-4 text-right font-mono text-green-400">
+                                <tr key={stat.affiliate.id} className="hover:bg-slate-700/30">
+                                    <td className="px-4 py-3 text-sm text-slate-200">{stat.affiliate.email}</td>
+                                    <td className="px-4 py-3 text-center font-mono text-sm">{stat.referrals}</td>
+                                    <td className="px-4 py-3 text-right font-mono text-sm text-green-400">
                                         {stat.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </td>
-                                    <td className="py-3 px-4 text-right font-mono text-amber-400">
+                                    <td className="px-4 py-3 text-right font-mono text-sm text-amber-400">
                                         {stat.totalCommission.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                     </td>
                                 </tr>
                             ))}
                              {stats.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="text-center py-6 text-slate-400">Nenhum afiliado ativo ou nenhuma transação encontrada.</td>
+                                    <td colSpan={4} className="text-center p-6 text-slate-400">Nenhum afiliado ativo ou nenhuma transação encontrada.</td>
                                 </tr>
                             )}
                         </tbody>
@@ -291,14 +287,16 @@ const AdminDashboard: React.FC = () => {
       
       {isGrantingCredits && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-sm p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Grant Credits to {isGrantingCredits.email}</h3>
-                <label htmlFor="credits" className="block text-slate-300 text-sm font-bold mb-2">Amount</label>
-                <input id="credits" type="number" value={creditsToGrant} onChange={(e) => setCreditsToGrant(parseInt(e.target.value, 10))} className="w-full bg-slate-700 border border-slate-600 rounded-md p-2" />
-                <div className="mt-6 flex justify-end gap-4">
-                    <button onClick={() => setIsGrantingCredits(null)} className="px-4 py-2 font-semibold text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
-                    <button onClick={handleGrantCredits} className="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-500">Confirm</button>
-                </div>
+            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-sm">
+              <div className="p-6">
+                <h3 className="text-lg font-bold mb-4">Grant Credits to {isGrantingCredits.email}</h3>
+                <label htmlFor="credits" className="block text-sm font-medium text-slate-300 mb-2">Amount</label>
+                <input id="credits" type="number" value={creditsToGrant} onChange={(e) => setCreditsToGrant(parseInt(e.target.value, 10))} className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              </div>
+              <div className="p-4 bg-slate-900/50 flex justify-end gap-4">
+                  <button onClick={() => setIsGrantingCredits(null)} className="px-4 py-2 font-semibold bg-slate-600 hover:bg-slate-500 rounded-md text-sm">Cancel</button>
+                  <button onClick={handleGrantCredits} className="px-4 py-2 font-semibold bg-green-600 hover:bg-green-500 rounded-md text-sm">Confirm</button>
+              </div>
             </div>
         </div>
       )}

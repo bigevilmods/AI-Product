@@ -28,10 +28,8 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ models, selectedModel, on
               ${selectedModel === model.id 
                 ? 'border-purple-500 bg-purple-900/50 scale-105 shadow-lg' 
                 : 'border-slate-700 hover:border-purple-400 hover:bg-slate-700/50'}
-              ${model.disabled 
-                ? 'opacity-40 cursor-not-allowed'
-                : ''}`
-            }
+              ${model.disabled ? 'opacity-40 cursor-not-allowed' : ''}
+            `}
           >
             <p className="font-bold text-white">{model.name}</p>
             <p className="text-xs text-slate-400 mt-1">{model.description}</p>

@@ -33,6 +33,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<VideoModel>('gemini-veo');
+  const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
   const [apiKeySelected, setApiKeySelected] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
   const messageIntervalRef = useRef<number | null>(null);
@@ -108,7 +109,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
 
     try {
       spendCredit(creditCost);
-      const videoUrl = await generateVideo(prompt, selectedModel);
+      const videoUrl = await generateVideo(prompt, selectedModel, aspectRatio);
       setGeneratedVideoUrl(videoUrl);
     } catch (e) {
       console.error(e);
@@ -120,21 +121,21 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, user, spendCredit, selectedModel, isVEOSelected, requestLogin]);
+  }, [prompt, user, spendCredit, selectedModel, aspectRatio, isVEOSelected, requestLogin]);
   
   if (isVEOSelected && !apiKeySelected) {
       return (
-          <div className="text-center p-8 bg-slate-800 rounded-lg shadow-lg">
+          <div className="text-center p-8 bg-slate-800 rounded-lg shadow-md max-w-2xl mx-auto">
               <h3 className="text-2xl font-bold text-white mb-4">API Key Required for VEO</h3>
-              <p className="text-slate-300 mb-6">Video generation with Veo requires you to select your own API key. Billing will be applied to the project associated with this key.</p>
-              <p className="text-xs text-slate-400 mb-6">For more information, see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline hover:text-purple-400">billing documentation</a>.</p>
+              <p className="text-slate-300 mb-4">Video generation with Veo requires you to select your own API key. Billing will be applied to the project associated with this key.</p>
+              <p className="text-sm text-slate-400 mb-6">For more information, see the <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noopener noreferrer" className="underline text-purple-400 hover:text-purple-300">billing documentation</a>.</p>
               <button
                   onClick={handleSelectKey}
-                  className="px-6 py-3 font-semibold text-lg text-white bg-purple-600 rounded-md hover:bg-purple-500 transition-colors"
+                  className="inline-flex items-center justify-center px-6 py-3 font-semibold text-base text-white transition-all duration-200 bg-purple-600 rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500"
               >
                   Select API Key
               </button>
-              {error && <p className="text-red-400 mt-4">{error}</p>}
+              {error && <p className="mt-4 text-red-400">{error}</p>}
           </div>
       );
   }
@@ -152,21 +153,37 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g., A neon hologram of a cat driving at top speed, cinematic, 9:16 aspect ratio."
-            className="w-full flex-grow bg-slate-900/50 border border-slate-600 rounded-lg p-3 text-slate-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 resize-y"
+            placeholder={`e.g., A neon hologram of a cat driving at top speed, cinematic, ${aspectRatio} aspect ratio.`}
+            className="w-full flex-grow bg-slate-900/50 border border-slate-700 rounded-lg p-3 text-slate-300 transition-colors focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 resize-vertical"
             rows={4}
           />
+        </div>
+
+        <div className="flex items-center gap-4 bg-slate-800 p-2 rounded-lg shadow-md">
+            <span className="text-slate-300 font-medium pl-2">Aspect Ratio:</span>
+            <button
+                onClick={() => setAspectRatio('9:16')}
+                className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '9:16' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+            >
+                9:16 (Portrait)
+            </button>
+            <button
+                onClick={() => setAspectRatio('16:9')}
+                className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '16:9' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+            >
+                16:9 (Landscape)
+            </button>
         </div>
 
         <div className="flex justify-center">
           <button
             onClick={handleGenerateVideo}
             disabled={!prompt.trim() || isLoading || selectedModelInfo?.disabled}
-            className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-500 rounded-lg shadow-lg hover:from-purple-700 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center px-8 py-4 font-bold text-lg text-white transition-all duration-200 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg shadow-lg hover:bg-gradient-to-br hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>
-                <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
+                <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" />
                 Generating...
               </>
             ) : (
@@ -179,33 +196,33 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
         </div>
         
         {error && (
-          <div className="text-center p-4 bg-red-900/50 border border-red-500 text-red-300 rounded-lg w-full">
+          <div className="text-center p-4 bg-red-800/50 border border-red-700 text-red-400 rounded-lg">
             <p>{error}</p>
           </div>
         )}
 
-        <div className="w-full flex justify-center mt-4">
+        <div className="w-full">
           {isLoading && (
-              <div className="w-full max-w-sm aspect-[9/16] bg-slate-800 rounded-lg flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+              <div className={`w-full max-w-sm ${aspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-[16/9]'} bg-slate-800 rounded-lg flex flex-col items-center justify-center text-slate-500 mx-auto p-4 text-center`}>
                   <LoadingSpinnerIcon className="w-12 h-12 animate-spin text-purple-400" />
-                  <p className="mt-4 font-semibold text-lg">{loadingMessage}</p>
+                  <p className="mt-4 font-semibold text-lg text-slate-400">{loadingMessage}</p>
               </div>
           )}
           {!isLoading && generatedVideoUrl && (
-              <div className="w-full max-w-sm aspect-[9/16] bg-black rounded-lg shadow-lg overflow-hidden">
+              <div className={`w-full max-w-sm ${aspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-[16/9]'} bg-black rounded-lg shadow-lg overflow-hidden mx-auto`}>
                   <video
                     src={generatedVideoUrl} 
                     controls
                     autoPlay
                     loop
-                    className="w-full h-full object-contain" 
+                    className="w-full h-full object-contain"
                   />
               </div>
           )}
           {!isLoading && !generatedVideoUrl && (
-              <div className="w-full max-w-sm aspect-[9/16] bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg flex flex-col items-center justify-center text-slate-500 p-4 text-center">
+              <div className={`w-full max-w-sm ${aspectRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-[16/9]'} bg-slate-800 border-2 border-dashed border-slate-700 rounded-lg flex flex-col items-center justify-center text-slate-500 mx-auto`}>
                   <UserIcon className="w-16 h-16" />
-                  <p className="mt-4 font-semibold">Your generated video will appear here</p>
+                  <p className="mt-4 font-semibold text-slate-400">Your generated video will appear here</p>
               </div>
           )}
         </div>

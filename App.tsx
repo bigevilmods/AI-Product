@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -8,9 +9,8 @@ import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import NotificationBanner from './components/NotificationBanner';
 import AffiliateDashboard from './pages/AffiliateDashboard';
-
-export type AppView = 'home' | 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator' | 'admin' | 'affiliate';
-export type AppMode = 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator';
+// FIX: To break a circular dependency, the AppView and AppMode types are now imported from a central types file.
+import type { AppView } from './types';
 
 
 function AppContent() {
@@ -31,7 +31,7 @@ function AppContent() {
 
   const requestLogin = () => setIsLoginOpen(true);
 
-  const mainContentPadding = view === 'home' ? 'pt-20' : 'pt-28 sm:pt-24';
+  const mainContentClass = view === 'home' ? 'pt-20' : 'pt-28 sm:pt-24';
   
   const renderView = () => {
     switch(view) {
@@ -47,13 +47,13 @@ function AppContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-900 text-white flex flex-col items-center p-4 sm:p-6 md:p-8 font-sans ${mainContentPadding}`}>
+    <div className={`min-h-screen flex flex-col items-center p-4 sm:p-6 font-sans ${mainContentClass}`}>
       <Header
         currentView={view}
         onViewChange={setView}
         onLoginClick={requestLogin}
       />
-      <div className="w-full max-w-6xl mx-auto z-10">
+      <div className="w-full max-w-7xl mx-auto z-10">
         <NotificationBanner />
         {renderView()}
       </div>
@@ -62,12 +62,13 @@ function AppContent() {
   );
 }
 
-function App() {
+// FIX: Refactored `App` from a function declaration to a constant with an arrow function. This avoids potential hoisting issues which can cause confusing module resolution errors in some environments.
+const App = () => {
   return (
     <AuthProvider>
       <AppContent />
     </AuthProvider>
   );
-}
+};
 
 export default App;

@@ -35,10 +35,10 @@ const AffiliateDashboard: React.FC = () => {
         <div className="flex flex-col gap-8">
             <header className="text-center">
                 <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-                  Painel de Afiliado
+                  Affiliate Dashboard
                 </h1>
                 <p className="mt-2 text-lg text-slate-400">
-                  Acompanhe seu desempenho e compartilhe seu link.
+                  Track your performance and share your link.
                 </p>
             </header>
             
@@ -48,26 +48,26 @@ const AffiliateDashboard: React.FC = () => {
                         <UsersIcon className="w-8 h-8 text-purple-300" />
                     </div>
                     <div>
-                        <p className="text-sm text-slate-400">Usuários Indicados</p>
+                        <p className="text-sm text-slate-400">Referred Users</p>
                         <p className="text-3xl font-bold text-white">{referredUsersCount}</p>
                     </div>
                 </div>
                 <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl flex items-center gap-4">
                      <div className="p-3 rounded-full bg-green-600/30 flex items-center justify-center w-14 h-14">
-                        <span className="text-2xl font-bold text-green-300">R$</span>
+                        <span className="text-2xl font-bold text-green-300">$</span>
                     </div>
                     <div>
-                        <p className="text-sm text-slate-400">Comissão Total</p>
+                        <p className="text-sm text-slate-400">Total Commission</p>
                         <p className="text-3xl font-bold text-white">
-                            {user.commissionEarned?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? 'R$ 0,00'}
+                            {user.commissionEarned?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) ?? '$0.00'}
                         </p>
                     </div>
                 </div>
             </div>
 
             <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-bold text-white mb-2">Seu Link de Referência</h2>
-                <p className="text-slate-400 mb-4">Compartilhe este link. Você ganhará uma comissão de <span className="font-bold text-amber-400">{((user.commissionRate || 0) * 100)}%</span> em todas as compras de créditos feitas por usuários que se registrarem através dele.</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Your Referral Link</h2>
+                <p className="text-slate-400 mb-4">Share this link. You'll earn a <span className="font-bold text-amber-400">{((user.commissionRate || 0) * 100)}%</span> commission on all credit purchases made by users who sign up through it.</p>
                 <div className="flex items-center gap-2 bg-slate-900/50 p-3 rounded-lg">
                     <LinkIcon className="w-5 h-5 text-slate-400 flex-shrink-0" />
                     <input

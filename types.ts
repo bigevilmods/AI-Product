@@ -29,7 +29,7 @@ export interface User {
 export interface Transaction {
     id: string;
     userId: string;
-    amountPaid: number; // In BRL (e.g., 45.00)
+    amountPaid: number; // In USD (e.g., 9.00)
     creditsPurchased: number;
     timestamp: number;
     affiliateId?: string; // The affiliate who gets the commission for this
@@ -40,10 +40,20 @@ export interface Transaction {
 export type PaymentStatus = 'pending' | 'paid';
 
 export interface PixCharge {
-  transactionId: string;
+  id: string; // transactionId from Mercado Pago
   status: PaymentStatus;
-  copyPasteCode: string;
-  qrCodeDataUrl: string; // The QR code will be a data URL (e.g., SVG)
+  point_of_interaction: {
+    transaction_data: {
+      qr_code: string; // copyPasteCode
+      qr_code_base64: string; // The QR code image as a base64 string
+    };
+  };
+}
+
+export interface CardPaymentResponse {
+  id: string;
+  status: 'approved' | 'rejected';
+  message: string;
 }
 
 export type ImageModel = 'imagen-4.0-generate-001' | 'nano-banana' | 'grok-imagine';

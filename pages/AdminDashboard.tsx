@@ -19,8 +19,6 @@ const AdminDashboard: React.FC = () => {
   
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [pixKey, setPixKey] = useState('');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success'>('idle');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [currentNotification, setCurrentNotification] = useState<string | null>(null);
   const [isGrantingCredits, setIsGrantingCredits] = useState<User | null>(null);
@@ -68,8 +66,6 @@ const AdminDashboard: React.FC = () => {
       setIsLoading(true);
       const allUsers = fetchUsers();
       fetchAnalytics(allUsers);
-      const savedKey = localStorage.getItem('adminPixKey') || '';
-      setPixKey(savedKey);
       const savedNotification = localStorage.getItem('globalNotification');
       if (savedNotification) {
         try {
@@ -81,12 +77,6 @@ const AdminDashboard: React.FC = () => {
       setIsLoading(false);
     }
   }, [user]);
-
-  const handleSavePixKey = () => {
-    localStorage.setItem('adminPixKey', pixKey);
-    setSaveStatus('success');
-    setTimeout(() => setSaveStatus('idle'), 2000);
-  };
 
   const handlePublishNotification = () => {
     if (!notificationMessage.trim()) return;
@@ -151,25 +141,25 @@ const AdminDashboard: React.FC = () => {
     <div className="flex flex-col gap-8">
       <div className="border-b border-slate-700">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-          <TabButton tab="management">Gerenciamento</TabButton>
-          <TabButton tab="analytics">Análise Financeira</TabButton>
+          <TabButton tab="management">Management</TabButton>
+          <TabButton tab="analytics">Financial Analytics</TabButton>
         </nav>
       </div>
 
       {activeTab === 'management' && (
         <div className="flex flex-col gap-8">
             <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                <h2 className="text-3xl font-bold text-white mb-6">Gerenciamento de Usuários</h2>
+                <h2 className="text-3xl font-bold text-white mb-6">User Management</h2>
                 <div className="overflow-x-auto">
                 <table className="min-w-full bg-slate-800 rounded-md">
                     <thead>
                     <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tl-md">Email</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Função</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Afiliado ID</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Comissão (%)</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Créditos</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Ações</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Affiliate ID</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Commission (%)</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Credits</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Actions</th>
                     </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
@@ -213,28 +203,17 @@ const AdminDashboard: React.FC = () => {
                 </table>
                 </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-8">
-                <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                    <h2 className="text-2xl font-bold text-white mb-4">Payment Settings</h2>
-                    <div>
-                    <label htmlFor="pixKey" className="block text-sm font-medium text-slate-300 mb-2">Your PIX Key</label>
-                    <input id="pixKey" type="text" value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="Enter your CPF, CNPJ, email, or phone number" className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                    <p className="text-xs text-slate-500 mt-2">This key will be used to generate real PIX charges for users. It is stored securely in your browser's local storage and is never shared.</p>
-                    <div className="mt-4"><button onClick={handleSavePixKey} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md text-sm" disabled={!pixKey}>{saveStatus === 'success' ? 'Saved!' : 'Save PIX Key'}</button></div>
-                    </div>
+            <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
+                <h2 className="text-2xl font-bold text-white mb-4">Global Notification</h2>
+                <div>
+                <label htmlFor="notificationMessage" className="block text-sm font-medium text-slate-300 mb-2">Notification Message</label>
+                <textarea id="notificationMessage" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} placeholder="Announce a new feature or maintenance..." rows={3} className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y" />
+                <p className="text-xs text-slate-500 mt-2">This message will be displayed in a banner at the top of the site for all users.</p>
+                {currentNotification && (<div className="mt-4 p-3 bg-slate-900/50 rounded-md"><p className="text-xs text-slate-400">Current active notification:</p><p className="text-sm text-slate-200">{currentNotification}</p></div>)}
+                <div className="mt-4 flex gap-4">
+                    <button onClick={handlePublishNotification} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md text-sm" disabled={!notificationMessage.trim()}>Publish</button>
+                    <button onClick={handleClearNotification} className="px-4 py-2 font-semibold bg-red-600 hover:bg-red-500 rounded-md text-sm" disabled={!currentNotification}>Clear</button>
                 </div>
-                <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                    <h2 className="text-2xl font-bold text-white mb-4">Global Notification</h2>
-                    <div>
-                    <label htmlFor="notificationMessage" className="block text-sm font-medium text-slate-300 mb-2">Notification Message</label>
-                    <textarea id="notificationMessage" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} placeholder="Announce a new feature or maintenance..." rows={3} className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500 resize-y" />
-                    <p className="text-xs text-slate-500 mt-2">This message will be displayed in a banner at the top of the site for all users.</p>
-                    {currentNotification && (<div className="mt-4 p-3 bg-slate-900/50 rounded-md"><p className="text-xs text-slate-400">Current active notification:</p><p className="text-sm text-slate-200">{currentNotification}</p></div>)}
-                    <div className="mt-4 flex gap-4">
-                        <button onClick={handlePublishNotification} className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md text-sm" disabled={!notificationMessage.trim()}>Publish</button>
-                        <button onClick={handleClearNotification} className="px-4 py-2 font-semibold bg-red-600 hover:bg-red-500 rounded-md text-sm" disabled={!currentNotification}>Clear</button>
-                    </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -243,21 +222,21 @@ const AdminDashboard: React.FC = () => {
       {activeTab === 'analytics' && (
         <div className="flex flex-col gap-8">
             <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                <h2 className="text-sm text-slate-400">Receita Total do Site</h2>
+                <h2 className="text-sm text-slate-400">Total Site Revenue</h2>
                 <p className="text-4xl font-bold text-green-400">
-                    {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                 </p>
             </div>
             <div className="bg-slate-800/50 p-6 rounded-lg shadow-xl">
-                <h2 className="text-2xl font-bold text-white mb-6">Desempenho dos Afiliados</h2>
+                <h2 className="text-2xl font-bold text-white mb-6">Affiliate Performance</h2>
                 <div className="overflow-x-auto">
                     <table className="min-w-full bg-slate-800 rounded-md">
                         <thead>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tl-md">Afiliado</th>
-                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Indicados</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Receita Gerada</th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Comissão Paga</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tl-md">Affiliate</th>
+                                <th className="px-4 py-3 text-center text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Referrals</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50">Revenue Generated</th>
+                                <th className="px-4 py-3 text-right text-xs font-medium text-slate-300 uppercase tracking-wider bg-slate-700/50 rounded-tr-md">Commission Paid</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700">
@@ -266,16 +245,16 @@ const AdminDashboard: React.FC = () => {
                                     <td className="px-4 py-3 text-sm text-slate-200">{stat.affiliate.email}</td>
                                     <td className="px-4 py-3 text-center font-mono text-sm">{stat.referrals}</td>
                                     <td className="px-4 py-3 text-right font-mono text-sm text-green-400">
-                                        {stat.totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        {stat.totalRevenue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono text-sm text-amber-400">
-                                        {stat.totalCommission.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        {stat.totalCommission.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
                                     </td>
                                 </tr>
                             ))}
                              {stats.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="text-center p-6 text-slate-400">Nenhum afiliado ativo ou nenhuma transação encontrada.</td>
+                                    <td colSpan={4} className="text-center p-6 text-slate-400">No active affiliates or transactions found.</td>
                                 </tr>
                             )}
                         </tbody>

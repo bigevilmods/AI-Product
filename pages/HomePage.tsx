@@ -9,7 +9,8 @@ interface HomePageProps {
   navigateTo: (mode: AppView) => void;
 }
 
-const features: { icon: JSX.Element; title: string; description: string; mode: AppView }[] = [
+// FIX: Changed JSX.Element to React.ReactNode to resolve namespace issue and maintain consistency with other components.
+const features: { icon: React.ReactNode; title: string; description: string; mode: AppView }[] = [
   {
     icon: <UsersIcon className="w-12 h-12 mb-4 text-purple-300" />,
     title: 'Influencer + Product',

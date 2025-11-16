@@ -1,5 +1,5 @@
 
-import type { PixCharge, PaymentStatus, Transaction } from '../types';
+import type { PixCharge, PaymentStatus, Transaction, CardPaymentResponse } from '../types';
 import { authService } from './authService';
 
 const pendingTransactions = new Map<string, { charge: PixCharge; confirmAt: number; amount: number; userId: string }>();
@@ -8,70 +8,99 @@ const mockTransactionDb: Transaction[] = [
     {
         id: 'tx_12345',
         userId: 'user-3',
-        amountPaid: 45.00,
+        amountPaid: 9.00,
         creditsPurchased: 50,
         timestamp: Date.now() - 86400000,
         affiliateId: 'aff-user-4',
-        commissionPaid: 6.75,
+        commissionPaid: 1.35,
     }
 ];
 
-const formatField = (id: string, value: string): string => {
-  const length = value.length.toString().padStart(2, '0');
-  return `${id}${length}${value}`;
-};
-const generateBRCode = (pixKey: string, amount: string, merchantName: string): string => {
-  const payloadFormatIndicator = '000201';
-  const merchantAccountInfo = formatField('00', 'br.gov.bcb.pix') + formatField('01', pixKey);
-  const merchantAccount = formatField('26', merchantAccountInfo);
-  const merchantCategoryCode = '52040000';
-  const transactionCurrency = '5303986';
-  const transactionAmount = formatField('54', amount.replace(',', '.'));
-  const countryCode = '5802BR';
-  const merchantNameFormatted = formatField('59', merchantName.substring(0, 25));
-  const merchantCity = formatField('60', 'SAO PAULO');
-  
-  const payload = `${payloadFormatIndicator}${merchantAccount}${merchantCategoryCode}${transactionCurrency}${transactionAmount}${countryCode}${merchantNameFormatted}${merchantCity}`;
-  let crc = 0xFFFF;
-  for (let i = 0; i < payload.length; i++) {
-    crc ^= payload.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
-    }
-  }
-  const crc16 = (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-  return `${payload}6304${crc16}`;
+// This function simulates a backend creating a payment with Mercado Pago SDK
+const simulateMercadoPagoApiCall = (amountInUSD: string, userEmail: string): PixCharge => {
+    const transactionId = `mp_${Date.now()}`;
+    const qrCodeCopyPaste = `00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-4266554400005204000053039865405${amountInUSD}5802BR5913CIELO JORE6009SAO PAULO62070503***6304EAF2`;
+    const qrCodeBase64 = "iVBORw0KGgoAAAANSUhEUgAAAMgAAADIAQMAAACXljzdAAAABlBMVEX///8AAABVwtN+AAABaklEQVR42uyYQY7DIAwEgf//0713PS4aSAhksmm3dZJkH1YgU+Abp64L4sXgT3I8b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEI4b27xIAhCEIQgCEIQhCAI4Z+QaP27Y1+U+pv/CIIgCIIgCIIgCIIgCIIgCIIgCIIgCEK4P+wHFyT5p2jS2jEAAAAASUVORK5CYII=";
+
+    return {
+        id: transactionId,
+        status: 'pending',
+        point_of_interaction: {
+            transaction_data: {
+                qr_code: qrCodeCopyPaste,
+                qr_code_base64: qrCodeBase64,
+            },
+        },
+    };
 };
 
+
 export const paymentService = {
-  async createPixCharge(amountInBRL: string, creditAmount: number, userId: string): Promise<PixCharge> {
-    const pixKey = localStorage.getItem('adminPixKey');
-    if (!pixKey) {
-      const notConfiguredSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="50" font-size="6" text-anchor="middle">PIX not configured by admin.</text></svg>`;
-      return {
-        transactionId: 'not-configured',
-        status: 'pending',
-        copyPasteCode: 'PIX key is not configured in the admin panel.',
-        qrCodeDataUrl: `data:image/svg+xml;base64,${btoa(notConfiguredSvg)}`,
-      };
+  async createPixCharge(amountInUSD: string, creditAmount: number, userId: string): Promise<PixCharge> {
+    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    if (!accessToken) {
+       const notConfiguredSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="50" font-size="6" text-anchor="middle">Payment system not configured.</text></svg>`;
+       const notConfiguredCharge: PixCharge = {
+           id: 'not-configured',
+           status: 'pending',
+           point_of_interaction: {
+               transaction_data: {
+                   qr_code: 'The payment system is not configured on the server. Please contact support.',
+                   qr_code_base64: btoa(notConfiguredSvg)
+               }
+           }
+       };
+       return notConfiguredCharge;
     }
     
     await new Promise(resolve => setTimeout(resolve, 500));
-    const transactionId = `pix_${Date.now()}`;
-    const copyPasteCode = generateBRCode(pixKey, amountInBRL, 'AI PROMPT GEN');
-    const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(copyPasteCode)}`;
-    const response = await fetch(qrApiUrl);
-    const blob = await response.blob();
-    const qrCodeDataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-    });
+    const payingUser = authService.getAllUsers().find(u => u.id === userId);
+    if (!payingUser) throw new Error("User not found for payment.");
 
-    const charge: PixCharge = { transactionId, status: 'pending', copyPasteCode, qrCodeDataUrl };
+    const charge = simulateMercadoPagoApiCall(amountInUSD, payingUser.email);
+    
     const confirmAt = Date.now() + 10000;
-    pendingTransactions.set(transactionId, { charge, confirmAt, amount: creditAmount, userId });
+    pendingTransactions.set(charge.id, { charge, confirmAt, amount: creditAmount, userId });
     return charge;
+  },
+
+  async createCardPayment(amountInUSD: string, creditAmount: number, userId: string): Promise<CardPaymentResponse> {
+    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    if (!accessToken) {
+        return { id: 'not-configured', status: 'rejected', message: 'The payment system is not configured on the server.' };
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const transactionId = `card_${Date.now()}`;
+    const allUsers = authService.getAllUsers();
+    const payingUser = allUsers.find(u => u.id === userId);
+    
+    if (!payingUser) throw new Error("User not found for payment.");
+
+    const amountPaid = parseFloat(amountInUSD);
+    
+    if (payingUser.referredBy) {
+        const affiliate = allUsers.find(u => u.affiliateId === payingUser.referredBy);
+        if (affiliate && affiliate.commissionRate) {
+            const commission = amountPaid * affiliate.commissionRate;
+            affiliate.commissionEarned = (affiliate.commissionEarned || 0) + commission;
+            authService.updateUser(affiliate);
+            
+            mockTransactionDb.push({
+                id: transactionId, userId: payingUser.id, amountPaid,
+                creditsPurchased: creditAmount, timestamp: Date.now(),
+                affiliateId: affiliate.affiliateId, commissionPaid: commission,
+            });
+        }
+    } else {
+         mockTransactionDb.push({
+            id: transactionId, userId: payingUser.id, amountPaid,
+            creditsPurchased: creditAmount, timestamp: Date.now(),
+         });
+    }
+
+    return { id: transactionId, status: 'approved', message: 'Payment successful!' };
   },
 
   async getPaymentStatus(transactionId: string): Promise<{ status: PaymentStatus, amount: number }> {
@@ -84,7 +113,7 @@ export const paymentService = {
       
       const allUsers = authService.getAllUsers();
       const payingUser = allUsers.find(u => u.id === tx.userId);
-      const amountPaid = parseFloat(tx.charge.copyPasteCode.match(/54\d{2}([\d.,]+)/)![1].replace(',', '.'));
+      const amountPaid = parseFloat(tx.charge.point_of_interaction.transaction_data.qr_code.match(/54\d{2}([\d.]+)/)![1]);
       
       if (payingUser && payingUser.referredBy) {
           const affiliate = allUsers.find(u => u.affiliateId === payingUser.referredBy);

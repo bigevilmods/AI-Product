@@ -113,17 +113,17 @@ const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLoginClick
                        <LogoIcon className="h-10 w-auto" />
                     </button>
                     <nav className="hidden md:flex items-baseline gap-1 ml-10">
-                      <NavDropdown title="Geradores de Prompt" isActive={isPromptGroupActive}>
+                      <NavDropdown title="Prompt Generators" isActive={isPromptGroupActive}>
                         {promptGenerators.map(({ mode, label }) => (
                           <NavLink key={mode} view={mode} isDropdown>{label}</NavLink>
                         ))}
                       </NavDropdown>
-                      <NavDropdown title="Geradores de IA" isActive={isAiGroupActive}>
+                      <NavDropdown title="AI Generators" isActive={isAiGroupActive}>
                         {aiGenerators.map(({ mode, label }) => (
                           <NavLink key={mode} view={mode} isDropdown>{label}</NavLink>
                         ))}
                       </NavDropdown>
-                      {user?.role === 'affiliate' && <NavLink view="affiliate">Painel de Afiliado</NavLink>}
+                      {user?.role === 'affiliate' && <NavLink view="affiliate">Affiliate Dashboard</NavLink>}
                     </nav>
                 </div>
 
@@ -189,21 +189,21 @@ const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLoginClick
         {isMobileMenuOpen && (
             <div className="md:hidden bg-slate-900 border-t border-slate-700">
                 <div className="px-2 pt-2 pb-3 flex flex-col gap-1 sm:px-3">
-                  <NavAccordion title="Geradores de Prompt" isOpen={openAccordion === 'prompts'} onToggle={() => toggleAccordion('prompts')}>
+                  <NavAccordion title="Prompt Generators" isOpen={openAccordion === 'prompts'} onToggle={() => toggleAccordion('prompts')}>
                      {promptGenerators.map(({ mode, label }) => (
                           <button key={mode} onClick={() => handleViewChange(mode)} className={`w-full text-left block p-3 rounded-md text-base font-medium ${currentView === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
                               {label}
                           </button>
                       ))}
                   </NavAccordion>
-                  <NavAccordion title="Geradores de IA" isOpen={openAccordion === 'ai'} onToggle={() => toggleAccordion('ai')}>
+                  <NavAccordion title="AI Generators" isOpen={openAccordion === 'ai'} onToggle={() => toggleAccordion('ai')}>
                      {aiGenerators.map(({ mode, label }) => (
                           <button key={mode} onClick={() => handleViewChange(mode)} className={`w-full text-left block p-3 rounded-md text-base font-medium ${currentView === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
                               {label}
                           </button>
                       ))}
                   </NavAccordion>
-                   {user?.role === 'affiliate' && <button onClick={() => handleViewChange('affiliate')} className={`w-full text-left block p-3 rounded-md text-base font-medium ${currentView === 'affiliate' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>Painel de Afiliado</button>}
+                   {user?.role === 'affiliate' && <button onClick={() => handleViewChange('affiliate')} className={`w-full text-left block p-3 rounded-md text-base font-medium ${currentView === 'affiliate' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>Affiliate Dashboard</button>}
                 </div>
                 <div className="pt-4 pb-3 border-t border-slate-700">
                     {isAuthenticated && user ? (

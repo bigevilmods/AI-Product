@@ -75,7 +75,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
                 onClick={() => handleModeChange('register')}
                 className={`flex-1 py-3 font-semibold transition-colors ${mode === 'register' ? 'text-white bg-slate-700/50' : 'text-slate-400 hover:bg-slate-700/20'}`}
               >
-                Registrar
+                Register
               </button>
           </div>
           
@@ -97,7 +97,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               className="shadow-sm appearance-none border border-slate-600 rounded-md w-full py-2 px-3 bg-slate-700 text-white leading-tight focus:outline-none focus:ring-2 focus:ring-purple-500"
               id="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

@@ -3,20 +3,15 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserIcon, LogoutIcon, LogoIcon, MenuIcon, XIcon, ChevronDownIcon } from './icons';
 import PaymentModal from './PaymentModal';
+import { AppView, AppMode } from '../App';
 
-type AppMode = 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator';
-type AdminRoute = 'main' | 'admin';
 
 interface HeaderProps {
-    currentMode: AppMode;
-    onModeChange: (mode: AppMode) => void;
-    currentRoute: AdminRoute;
-    onNavigate: (route: AdminRoute) => void;
-    onGoHome: () => void;
+    currentView: AppView;
+    onViewChange: (view: AppView) => void;
     onLoginClick: () => void;
 }
 
-// Sub-components for better structure
 const NavDropdown: React.FC<{ title: string; children: React.ReactNode; isActive: boolean }> = ({ title, children, isActive }) => (
   <div className="relative dropdown">
     <button className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive ? 'bg-purple-600/50 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}>
@@ -46,24 +41,20 @@ const NavAccordion: React.FC<{ title: string; children: React.ReactNode; isOpen:
 );
 
 
-const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute, onNavigate, onGoHome, onLoginClick }) => {
+const Header: React.FC<HeaderProps> = ({ currentView, onViewChange, onLoginClick }) => {
   const { user, logout, isAdmin, isAuthenticated } = useAuth();
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
 
-  const handleModeChange = (mode: AppMode) => {
-    onModeChange(mode);
-    setMobileMenuOpen(false); // Close mobile menu on navigation
+  const handleViewChange = (view: AppView) => {
+    onViewChange(view);
+    setMobileMenuOpen(false);
   }
-
-  const handleAdminNavigate = (route: AdminRoute) => {
-    onNavigate(route);
-    setMobileMenuOpen(false); // Close mobile menu on navigation
-  }
-
+  
   const handleLogout = () => {
       logout();
+      handleViewChange('home');
       setMobileMenuOpen(false);
   }
   
@@ -91,61 +82,59 @@ const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute
     { mode: 'videoGenerator', label: 'Video Generator' },
   ];
   
-  const isPromptGroupActive = promptGenerators.some(p => p.mode === currentMode);
-  const isAiGroupActive = aiGenerators.some(a => a.mode === currentMode);
+  const isPromptGroupActive = promptGenerators.some(p => p.mode === currentView);
+  const isAiGroupActive = aiGenerators.some(a => a.mode === currentView);
 
-  const adminNavClass = (route: AdminRoute) => 
+  const adminNavClass = (view: AppView) => 
     `cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-      currentRoute === route 
+      currentView === view 
       ? 'bg-purple-600 text-white' 
       : 'text-slate-300 hover:bg-slate-700 hover:text-white'
     }`;
     
+  const NavLink: React.FC<{view: AppView, children: React.ReactNode, isDropdown?: boolean}> = ({ view, children, isDropdown = false }) => (
+     <button
+        onClick={() => handleViewChange(view)}
+        className={isDropdown 
+            ? `w-full text-left block px-4 py-2 text-sm transition-colors ${currentView === view ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`
+            : adminNavClass(view)
+        }
+      >
+        {children}
+      </button>
+  );
 
   return (
     <>
       <header className="fixed top-0 left-0 right-0 w-full bg-slate-900/80 backdrop-blur-md shadow-lg z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
-                {/* Logo and Desktop Main Nav */}
                 <div className="flex items-center">
-                    <button onClick={onGoHome} className="flex-shrink-0" aria-label="Go to Home page">
+                    <button onClick={() => handleViewChange('home')} className="flex-shrink-0" aria-label="Go to Home page">
                        <LogoIcon className="h-10 w-auto" />
                     </button>
                     <nav className="hidden md:flex items-baseline space-x-1 ml-10">
                       <NavDropdown title="Geradores de Prompt" isActive={isPromptGroupActive}>
                         {promptGenerators.map(({ mode, label }) => (
-                          <button
-                            key={mode}
-                            onClick={() => handleModeChange(mode)}
-                            className={`w-full text-left block px-4 py-2 text-sm transition-colors ${currentMode === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}
-                          >
-                            {label}
-                          </button>
+                          <NavLink key={mode} view={mode} isDropdown>{label}</NavLink>
                         ))}
                       </NavDropdown>
                       <NavDropdown title="Geradores de IA" isActive={isAiGroupActive}>
                         {aiGenerators.map(({ mode, label }) => (
-                          <button
-                            key={mode}
-                            onClick={() => handleModeChange(mode)}
-                             className={`w-full text-left block px-4 py-2 text-sm transition-colors ${currentMode === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}`}
-                          >
-                            {label}
-                          </button>
+                          <NavLink key={mode} view={mode} isDropdown>{label}</NavLink>
                         ))}
                       </NavDropdown>
+                      {user?.role === 'affiliate' && <NavLink view="affiliate">Painel de Afiliado</NavLink>}
                     </nav>
                 </div>
 
-                {/* Desktop User Menu & Admin Nav */}
                 <div className="hidden md:flex items-center gap-4">
                     {isAuthenticated && user ? (
                         <>
                             {isAdmin && (
                                 <nav className="flex items-center space-x-1 p-1 bg-slate-800 rounded-lg">
-                                    <button onClick={() => handleAdminNavigate('main')} className={adminNavClass('main')}>App</button>
-                                    <button onClick={() => handleAdminNavigate('admin')} className={adminNavClass('admin')}>Admin</button>
+                                    <NavLink view="home">App</NavLink>
+                                    <NavLink view="admin">Admin</NavLink>
                                 </nav>
                             )}
                             <div className="flex items-center gap-2">
@@ -180,7 +169,6 @@ const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute
                     )}
                 </div>
 
-                {/* Mobile Menu Button */}
                 <div className="md:hidden flex items-center">
                     <button
                         onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
@@ -192,24 +180,24 @@ const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute
             </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
             <div className="md:hidden bg-slate-900 border-t border-slate-700">
                 <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                   <NavAccordion title="Geradores de Prompt" isOpen={openAccordion === 'prompts'} onToggle={() => toggleAccordion('prompts')}>
                      {promptGenerators.map(({ mode, label }) => (
-                          <button key={mode} onClick={() => handleModeChange(mode)} className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium ${currentMode === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
+                          <button key={mode} onClick={() => handleViewChange(mode)} className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium ${currentView === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
                               {label}
                           </button>
                       ))}
                   </NavAccordion>
                   <NavAccordion title="Geradores de IA" isOpen={openAccordion === 'ai'} onToggle={() => toggleAccordion('ai')}>
                      {aiGenerators.map(({ mode, label }) => (
-                          <button key={mode} onClick={() => handleModeChange(mode)} className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium ${currentMode === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
+                          <button key={mode} onClick={() => handleViewChange(mode)} className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium ${currentView === mode ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>
                               {label}
                           </button>
                       ))}
                   </NavAccordion>
+                   {user?.role === 'affiliate' && <button onClick={() => handleViewChange('affiliate')} className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium ${currentView === 'affiliate' ? 'bg-purple-600 text-white' : 'text-slate-300 hover:text-white hover:bg-slate-700'}`}>Painel de Afiliado</button>}
                 </div>
                 <div className="pt-4 pb-3 border-t border-slate-700">
                     {isAuthenticated && user ? (
@@ -224,10 +212,10 @@ const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute
                             <div className="mt-3 px-2 space-y-1">
                                 {isAdmin && (
                                     <>
-                                        <button onClick={() => handleAdminNavigate('main')} className={`${adminNavClass('main')} w-full text-left block px-3 py-2 rounded-md text-base font-medium`}>
+                                        <button onClick={() => handleViewChange('home')} className={`${adminNavClass('home')} w-full text-left block px-3 py-2 rounded-md text-base font-medium`}>
                                             App
                                         </button>
-                                        <button onClick={() => handleAdminNavigate('admin')} className={`${adminNavClass('admin')} w-full text-left block px-3 py-2 rounded-md text-base font-medium`}>
+                                        <button onClick={() => handleViewChange('admin')} className={`${adminNavClass('admin')} w-full text-left block px-3 py-2 rounded-md text-base font-medium`}>
                                             Admin Panel
                                         </button>
                                     </>
@@ -266,10 +254,10 @@ const Header: React.FC<HeaderProps> = ({ currentMode, onModeChange, currentRoute
             </div>
         )}
       </header>
-      <PaymentModal
+      {isPaymentModalOpen && <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-      />
+      />}
     </>
   );
 };

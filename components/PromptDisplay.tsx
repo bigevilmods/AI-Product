@@ -6,7 +6,6 @@ interface PromptDisplayProps {
   prompt: string;
 }
 
-// A simple markdown-to-html converter for bold text
 const formatPrompt = (text: string) => {
     return text
         .split('\n')

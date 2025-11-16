@@ -45,7 +45,7 @@ const ProductAdPromptGenerator: React.FC<ProductAdPromptGeneratorProps> = ({ req
     setConsistencyResult(null);
 
     try {
-      spendCredit(); // Deduct credit
+      spendCredit();
       const prompt = await generateProductAdPrompt(productImages, language);
       setGeneratedPrompt(prompt);
     } catch (e) {

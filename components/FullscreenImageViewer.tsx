@@ -31,7 +31,7 @@ const FullscreenImageViewer: React.FC<FullscreenImageViewerProps> = ({ src, onCl
       </button>
       <div 
         className="relative max-w-full max-h-full" 
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
+        onClick={(e) => e.stopPropagation()}
       >
         <img src={src} alt="Fullscreen view" className="block max-w-[95vw] max-h-[95vh] object-contain rounded-lg shadow-2xl" />
       </div>

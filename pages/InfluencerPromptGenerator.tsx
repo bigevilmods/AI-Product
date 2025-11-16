@@ -43,10 +43,10 @@ const InfluencerPromptGenerator: React.FC<InfluencerPromptGeneratorProps> = ({ r
     setIsLoading(true);
     setError(null);
     setGeneratedPrompt('');
-    setConsistencyResult(null); // Reset consistency result on new generation
+    setConsistencyResult(null);
 
     try {
-      spendCredit(); // Deduct credit
+      spendCredit();
       const prompt = await generateVideoPrompt(influencerImage, productImages, language);
       setGeneratedPrompt(prompt);
     } catch (e) {

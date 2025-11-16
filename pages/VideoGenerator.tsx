@@ -1,15 +1,10 @@
 
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { generateVideo } from '../services/geminiService';
 import { SparklesIcon, LoadingSpinnerIcon, UserIcon } from '../components/icons';
 import ModelSelector from '../components/ModelSelector';
 import type { VideoModel } from '../types';
-
-// FIX: The AIStudio interface and window augmentation were moved to `types.ts`
-// to create a single source of truth for this global type and resolve a
-// "Subsequent property declarations" TypeScript error.
 
 interface VideoGeneratorProps {
   requestLogin?: () => void;
@@ -81,7 +76,6 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     if (window.aistudio) {
         try {
             await window.aistudio.openSelectKey();
-            // Assume success and optimistically update UI
             setApiKeySelected(true);
             setError(null);
         } catch (e) {
@@ -120,7 +114,6 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       setError(`Failed to generate video: ${errorMessage}`);
-      // If API key error, prompt user to select again.
       if (isVEOSelected && errorMessage.includes("API key error")) {
           setApiKeySelected(false);
       }

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { ConsistencyResult } from '../types';
 import { ShieldCheckIcon } from './icons';

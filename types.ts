@@ -1,3 +1,4 @@
+
 export interface ImageFile {
   base64: string;
   mimeType: string;
@@ -10,14 +11,30 @@ export interface ConsistencyResult {
 
 export type LanguageCode = 'en' | 'pt' | 'fr' | 'es' | 'it' | 'af' | 'zh' | 'ja' | 'ar';
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'admin' | 'influencer' | 'affiliate';
 
 export interface User {
   id: string;
   email: string;
   role: UserRole;
   credits: number;
+  // Affiliate System Fields
+  affiliateId?: string; // Unique ID for affiliates
+  commissionRate?: number; // e.g., 0.10 for 10%
+  commissionEarned?: number; // Total commission earned in currency
+  referredBy?: string; // The affiliateId of the user who referred them
 }
+
+export interface Transaction {
+    id: string;
+    userId: string;
+    amountPaid: number; // In BRL (e.g., 45.00)
+    creditsPurchased: number;
+    timestamp: number;
+    affiliateId?: string; // The affiliate who gets the commission for this
+    commissionPaid?: number; // The amount of commission paid
+}
+
 
 export type PaymentStatus = 'pending' | 'paid';
 
@@ -31,9 +48,6 @@ export interface PixCharge {
 export type ImageModel = 'imagen-4.0-generate-001' | 'nano-banana' | 'grok-imagine';
 export type VideoModel = 'gemini-veo' | 'openai-sora' | 'openai-sora-2';
 
-// FIX: To resolve "Subsequent property declarations" TypeScript error, the AIStudio
-// interface and window augmentation are defined here, creating a single global
-// source of truth.
 declare global {
     interface AIStudio {
         hasSelectedApiKey: () => Promise<boolean>;

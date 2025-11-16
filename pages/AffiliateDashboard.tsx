@@ -1,0 +1,95 @@
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/authService';
+import { LinkIcon, CopyIcon, CheckIcon, UsersIcon } from '../components/icons';
+
+const AffiliateDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const [referralLink, setReferralLink] = useState('');
+    const [referredUsersCount, setReferredUsersCount] = useState(0);
+    const [isCopied, setIsCopied] = useState(false);
+
+    useEffect(() => {
+        if (user?.role === 'affiliate' && user.affiliateId) {
+            const link = `${window.location.origin}${window.location.pathname}?ref=${user.affiliateId}`;
+            setReferralLink(link);
+
+            const allUsers = authService.getAllUsers();
+            const count = allUsers.filter(u => u.referredBy === user.affiliateId).length;
+            setReferredUsersCount(count);
+        }
+    }, [user]);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralLink);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+    
+    if (user?.role !== 'affiliate') {
+        return <div className="text-center p-10 text-red-400">Access Denied.</div>;
+    }
+
+    return (
+        <div className="space-y-8">
+            <header className="text-center">
+                <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                  Painel de Afiliado
+                </h1>
+                <p className="mt-2 text-lg text-slate-400">
+                  Acompanhe seu desempenho e compartilhe seu link.
+                </p>
+            </header>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg flex items-center gap-4">
+                    <div className="p-3 bg-purple-600/30 rounded-full">
+                        <UsersIcon className="w-8 h-8 text-purple-300" />
+                    </div>
+                    <div>
+                        <p className="text-sm text-slate-400">Usuários Indicados</p>
+                        <p className="text-3xl font-bold text-white">{referredUsersCount}</p>
+                    </div>
+                </div>
+                <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg flex items-center gap-4">
+                     <div className="p-3 bg-green-600/30 rounded-full">
+                        <span className="text-3xl font-bold text-green-300">R$</span>
+                    </div>
+                    <div>
+                        <p className="text-sm text-slate-400">Comissão Total</p>
+                        <p className="text-3xl font-bold text-white">
+                            {user.commissionEarned?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? 'R$ 0,00'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-slate-800/50 p-6 rounded-lg shadow-lg">
+                <h2 className="text-2xl font-bold text-white mb-4">Seu Link de Referência</h2>
+                <p className="text-slate-400 mb-4">Compartilhe este link. Você ganhará uma comissão de <span className="font-bold text-amber-400">{((user.commissionRate || 0) * 100)}%</span> em todas as compras de créditos feitas por usuários que se registrarem através dele.</p>
+                <div className="flex items-center gap-2 bg-slate-900/50 p-3 rounded-lg">
+                    <LinkIcon className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                    <input
+                        type="text"
+                        readOnly
+                        value={referralLink}
+                        className="w-full bg-transparent text-slate-200 font-mono text-sm focus:outline-none"
+                    />
+                    <button
+                        onClick={handleCopy}
+                        className="flex items-center px-3 py-1.5 text-sm font-medium bg-slate-700 hover:bg-purple-600 rounded-md transition-colors duration-200"
+                    >
+                        {isCopied ? (
+                            <CheckIcon className="w-4 h-4 text-green-400" />
+                        ) : (
+                            <CopyIcon className="w-4 h-4" />
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AffiliateDashboard;

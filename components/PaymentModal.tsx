@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { paymentService } from '../services/paymentService';
@@ -10,26 +11,48 @@ interface PaymentModalProps {
 }
 
 type PaymentStep = 'selectPackage' | 'generatingPix' | 'showPix' | 'paymentSuccess' | 'pixNotConfigured';
+type PaymentTab = 'packages' | 'custom';
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
-  const { addCredits } = useAuth();
+  const { user, addCredits } = useAuth();
   const [step, setStep] = useState<PaymentStep>('selectPackage');
-  const [selectedPackage, setSelectedPackage] = useState<{ credits: number; price: string }>({ credits: 50, price: '45,00' });
   const [pixCharge, setPixCharge] = useState<PixCharge | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
+  // Package state
+  const [selectedPackage, setSelectedPackage] = useState({ credits: 50, price: '45,00' });
   const packages = [
     { credits: 10, price: '10,00' },
     { credits: 50, price: '45,00' },
     { credits: 100, price: '80,00' },
   ];
+
+  // Custom purchase state
+  const [activeTab, setActiveTab] = useState<PaymentTab>('packages');
+  const [customCredits, setCustomCredits] = useState(100);
+  const CREDIT_PRICE = 0.25;
+
+  const getPrice = () => {
+    if (activeTab === 'packages') {
+      return selectedPackage.price;
+    }
+    return (customCredits * CREDIT_PRICE).toFixed(2).replace('.', ',');
+  };
+  const getCredits = () => {
+    if (activeTab === 'packages') {
+      return selectedPackage.credits;
+    }
+    return customCredits;
+  };
   
   useEffect(() => {
     if (isOpen) {
       setStep('selectPackage');
+      setActiveTab('packages');
       setPixCharge(null);
       setIsCopied(false);
       setSelectedPackage({ credits: 50, price: '45,00' });
+      setCustomCredits(100);
     }
   }, [isOpen]);
 
@@ -55,9 +78,13 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
   }, [step, pixCharge, addCredits, onClose]);
 
   const handleCreatePix = async () => {
+    if (!user) {
+        alert("You must be logged in to purchase credits.");
+        return;
+    }
     setStep('generatingPix');
     try {
-      const charge = await paymentService.createPixCharge(selectedPackage.price, selectedPackage.credits);
+      const charge = await paymentService.createPixCharge(getPrice(), getCredits(), user.id);
       if (charge.transactionId === 'not-configured') {
         setPixCharge(charge);
         setStep('pixNotConfigured');
@@ -79,6 +106,28 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleCustomCreditChange = (value: string) => {
+      const numValue = Math.max(10, Math.min(1000, parseInt(value, 10) || 10));
+      setCustomCredits(numValue);
+  }
+  
+  const TabButton: React.FC<{tab: PaymentTab, children: React.ReactNode}> = ({ tab, children }) => {
+      const isActive = activeTab === tab;
+      return (
+          <button
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors rounded-t-lg
+                  ${isActive 
+                      ? 'bg-slate-800 text-white' 
+                      : 'bg-slate-700/50 text-slate-400 hover:bg-slate-800/60'
+                  }`}
+          >
+              {children}
+          </button>
+      )
+  };
+
+
   const renderContent = () => {
     switch (step) {
       case 'paymentSuccess':
@@ -86,7 +135,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
           <div className="p-10 flex flex-col items-center justify-center text-center">
             <CheckIcon className="w-16 h-16 text-green-500 mb-4" />
             <h2 className="text-2xl font-bold text-white">Payment Successful!</h2>
-            <p className="text-slate-300 mt-2">{selectedPackage.credits} credits have been added to your account.</p>
+            <p className="text-slate-300 mt-2">{getCredits()} credits have been added to your account.</p>
           </div>
         );
       case 'generatingPix':
@@ -145,37 +194,70 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
           <>
             <div className="p-6 border-b border-slate-700">
                 <h2 className="text-2xl font-bold text-white">Buy Credits</h2>
-                <p className="text-slate-400">Select a package to add credits to your account.</p>
+                <p className="text-slate-400">Select an option to add credits to your account.</p>
             </div>
             <div className="p-6">
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {packages.map(pkg => (
-                        <button key={pkg.credits} onClick={() => setSelectedPackage(pkg)} className={`p-4 border-2 rounded-lg text-center transition-colors ${selectedPackage.credits === pkg.credits ? 'border-purple-500 bg-purple-900/50' : 'border-slate-600 hover:border-purple-400'}`}>
-                            <p className="text-xl font-bold text-amber-400">{pkg.credits}</p>
-                            <p className="text-sm text-slate-300">Credits</p>
-                            <p className="text-xs text-slate-400 mt-2">R$ {pkg.price}</p>
+                <div className="flex gap-1 bg-slate-700/50 p-1 rounded-lg">
+                    <TabButton tab="packages">Pacotes</TabButton>
+                    <TabButton tab="custom">Personalizado</TabButton>
+                </div>
+                
+                <div className="bg-slate-800 p-6 rounded-b-lg">
+                    {activeTab === 'packages' && (
+                        <div className="grid grid-cols-3 gap-4">
+                            {packages.map(pkg => (
+                                <button key={pkg.credits} onClick={() => setSelectedPackage(pkg)} className={`p-4 border-2 rounded-lg text-center transition-colors ${selectedPackage.credits === pkg.credits && activeTab === 'packages' ? 'border-purple-500 bg-purple-900/50' : 'border-slate-600 hover:border-purple-400'}`}>
+                                    <p className="text-xl font-bold text-amber-400">{pkg.credits}</p>
+                                    <p className="text-sm text-slate-300">Credits</p>
+                                    <p className="text-xs text-slate-400 mt-2">R$ {pkg.price}</p>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {activeTab === 'custom' && (
+                        <div className="space-y-4">
+                            <div className="text-center">
+                               <p className="text-4xl font-bold text-amber-400">{customCredits}</p>
+                               <p className="text-sm text-slate-300">Credits</p>
+                            </div>
+                            <input
+                                type="range"
+                                min="10"
+                                max="1000"
+                                step="10"
+                                value={customCredits}
+                                onChange={(e) => handleCustomCreditChange(e.target.value)}
+                                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                            />
+                             <div className="flex items-center gap-2">
+                                <input type="number" value={customCredits} onChange={(e) => handleCustomCreditChange(e.target.value)} className="w-24 bg-slate-700 border border-slate-600 rounded-md p-1 text-center" />
+                                <span className="text-slate-400 text-sm">R$ {(customCredits * CREDIT_PRICE).toFixed(2)}</span>
+                             </div>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="mt-6">
+                    <div className="flex">
+                        <button className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-700 text-white">
+                            <PixIcon className="w-5 h-5"/> PIX
                         </button>
-                    ))}
-                </div>
-                <div className="flex">
-                    <button className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-700 text-white">
-                        <PixIcon className="w-5 h-5"/> PIX
-                    </button>
-                     <div className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-800 text-slate-500 cursor-not-allowed" title="Coming soon">
-                        <CreditCardIcon className="w-5 h-5"/> Credit Card
+                         <div className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-800 text-slate-500 cursor-not-allowed" title="Coming soon">
+                            <CreditCardIcon className="w-5 h-5"/> Credit Card
+                        </div>
+                         <div className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-800 text-slate-500 cursor-not-allowed" title="Coming soon">
+                            <BankIcon className="w-5 h-5"/> Debit Card
+                        </div>
                     </div>
-                     <div className="flex-1 p-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-t-lg bg-slate-800 text-slate-500 cursor-not-allowed" title="Coming soon">
-                        <BankIcon className="w-5 h-5"/> Debit Card
+                     <div className="bg-slate-700 p-6 rounded-b-lg text-center">
+                        <p className="text-slate-300 text-sm">You will be redirected to generate a PIX QR Code.</p>
                     </div>
-                </div>
-                 <div className="bg-slate-700 p-6 rounded-b-lg text-center">
-                    <p className="text-slate-300 text-sm">You will be redirected to generate a PIX QR Code.</p>
                 </div>
             </div>
             <div className="p-6 bg-slate-900/50 rounded-b-lg flex justify-end gap-4">
                 <button onClick={onClose} className="px-4 py-2 font-semibold text-slate-300 bg-slate-700 rounded-md hover:bg-slate-600">Cancel</button>
                 <button onClick={handleCreatePix} className="px-4 py-2 font-semibold text-white bg-purple-600 rounded-md hover:bg-purple-500">
-                    Pay R$ {selectedPackage.price} with PIX
+                    Pay R$ {getPrice()} with PIX
                 </button>
             </div>
           </>
@@ -187,7 +269,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         {renderContent()}
       </div>
     </div>

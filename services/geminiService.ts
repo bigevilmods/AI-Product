@@ -3,16 +3,8 @@ import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { ImageFile, ConsistencyResult, LanguageCode, ImageModel, VideoModel } from '../types';
 
 if (!process.env.API_KEY) {
-    // In a real app, you might want to handle this more gracefully.
-    // For this context, we assume the key is provided in the environment.
     console.warn("API_KEY environment variable not set. Using a placeholder which will likely fail.");
 }
-
-// NOTE: For non-Google models, API keys would be sourced from environment variables.
-// Example:
-// const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// const GROK_API_KEY = process.env.GROK_API_KEY;
-
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 const model = "gemini-2.5-flash";
@@ -102,7 +94,6 @@ export const generateVideoPrompt = async (
     const productParts = productImages.map(fileToGenerativePart);
     const promptTemplate = createPromptTemplate(language);
 
-    // FIX: For single-turn requests with multiple parts, `contents` should be a single object, not an array.
     const response = await ai.models.generateContent({
       model: model,
       contents: {
@@ -179,7 +170,6 @@ export const generateProductAdPrompt = async (
     const productParts = productImages.map(fileToGenerativePart);
     const promptTemplate = createProductAdPromptTemplate(language);
 
-    // FIX: For single-turn requests with multiple parts, `contents` should be a single object, not an array.
     const response = await ai.models.generateContent({
       model: model,
       contents: {
@@ -289,7 +279,6 @@ Based on your audit, respond with the specified JSON format indicating if the pr
   try {
      const response = await ai.models.generateContent({
       model: model,
-      // FIX: For simple text-only prompts, `contents` can be a string directly.
       contents: `Audit this prompt:\n\n---\n\n${prompt}`,
       config: {
         systemInstruction,
@@ -299,7 +288,6 @@ Based on your audit, respond with the specified JSON format indicating if the pr
     });
 
     const jsonText = response.text.trim();
-    // In case the model returns markdown with the json
     const jsonMatch = jsonText.match(/```json\n([\s\S]*?)\n```/);
     const parsableText = jsonMatch ? jsonMatch[1] : jsonText;
 
@@ -362,8 +350,6 @@ export const generateImage = async (prompt: string, numberOfImages: number, mode
         throw new Error("Nano Banana model did not return an image.");
 
       case 'grok-imagine':
-        // Placeholder for Grok Imagine API call.
-        // Would use something like: const grokClient = new Grok({ apiKey: GROK_API_KEY });
         throw new Error("Grok Imagine model is not yet integrated.");
 
       default:
@@ -381,14 +367,9 @@ export const generateImage = async (prompt: string, numberOfImages: number, mode
 export const generateVideo = async (prompt: string, model: VideoModel): Promise<string> => {
   try {
     if (model !== 'gemini-veo') {
-      // Placeholder for other models like OpenAI Sora.
-      // An API call for Sora would look something like:
-      // const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
-      // const response = await openai.video.generations.create(...)
       throw new Error(`Model '${model}' is not supported for video generation yet.`);
     }
 
-    // Create a new instance right before the call to ensure the latest API key is used.
     const localAi = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
     let operation = await localAi.models.generateVideos({
@@ -402,7 +383,6 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
     });
 
     while (!operation.done) {
-      // Poll every 10 seconds.
       await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await localAi.operations.getVideosOperation({ operation: operation });
     }
@@ -412,7 +392,6 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
         throw new Error("Video generation completed, but no download link was found.");
     }
     
-    // Fetch the video data using the download link and the API key.
     const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
     if (!response.ok) {
         throw new Error(`Failed to fetch video file: ${response.statusText}`);
@@ -424,7 +403,6 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
   } catch (error) {
     console.error("Error generating video:", error);
     if (error instanceof Error) {
-        // Re-throw specific errors to be handled by the UI
         if (error.message.includes("Requested entity was not found")) {
             throw new Error("API key error. Please re-select your API key and try again.");
         }

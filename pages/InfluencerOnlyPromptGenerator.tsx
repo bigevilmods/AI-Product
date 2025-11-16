@@ -46,7 +46,7 @@ const InfluencerOnlyPromptGenerator: React.FC<InfluencerOnlyPromptGeneratorProps
     setConsistencyResult(null);
 
     try {
-      spendCredit(); // Deduct credit
+      spendCredit();
       const prompt = await generateInfluencerOnlyPrompt(influencerImage, actions, language);
       setGeneratedPrompt(prompt);
     } catch (e) {

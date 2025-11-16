@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import type { ImageFile } from '../types';
 
@@ -14,7 +15,6 @@ const fileToBase64 = (file: File): Promise<string> => {
         reader.readAsDataURL(file);
         reader.onload = () => {
             if (typeof reader.result === 'string') {
-                // remove the data URI prefix
                 resolve(reader.result.split(',')[1]);
             } else {
                 reject(new Error('Failed to read file as base64 string'));
@@ -40,7 +40,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
       
       const filesToProcess = multiple ? imageFiles : [imageFiles[0]];
 
-      // Clean up old object URLs to prevent memory leaks
       previews.forEach(URL.revokeObjectURL);
 
       const newPreviewUrls = filesToProcess.map(file => URL.createObjectURL(file));
@@ -81,7 +80,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ title, icon, onIma
       <label
         className={`relative w-full h-64 border-2 border-dashed rounded-lg flex flex-col justify-center items-center cursor-pointer transition-colors duration-200 ${isDragging ? 'border-purple-500 bg-slate-700/50' : 'border-slate-600 hover:border-purple-400'}`}
         onDragEnter={handleDragEnter}
-        onDragOver={handleDragEnter} // DragOver is needed for drop to work
+        onDragOver={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >

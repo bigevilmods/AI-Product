@@ -47,7 +47,6 @@ const MainApp: React.FC<MainAppProps> = ({ mode, requestLogin }) => {
       }
   }
   
-  // Clone the component to pass down the requestLogin prop
   const componentWithProps = React.cloneElement(currentMode.component, { requestLogin });
 
   return (

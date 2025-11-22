@@ -57,6 +57,14 @@ declare global {
         aistudio?: AIStudio;
         MercadoPago: any;
     }
+    // FIX: Add type definitions for Vite environment variables to resolve `import.meta.env` errors.
+    interface ImportMetaEnv {
+      readonly VITE_API_KEY: string;
+      readonly VITE_FIREBASE_API_KEY: string;
+    }
+    interface ImportMeta {
+      readonly env: ImportMetaEnv;
+    }
 }
 // FIX: Moved AppView and AppMode to this central types file to resolve circular dependencies.
 export type AppView = 'home' | 'influencer' | 'productAd' | 'influencerOnly' | 'imageGenerator' | 'videoGenerator' | 'storyboardGenerator' | 'textToSpeechGenerator' | 'admin' | 'affiliate';

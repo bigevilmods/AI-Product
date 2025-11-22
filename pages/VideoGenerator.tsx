@@ -27,6 +27,8 @@ const videoModels = [
     { id: 'openai-sora-2', name: 'Sora 2', description: 'Coming soon.', disabled: true },
 ];
 
+type VideoStyle = 'default' | 'casual' | 'formal';
+
 const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
   const { user, spendCredit } = useAuth();
   const [prompt, setPrompt] = useState<string>('');
@@ -36,6 +38,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
   const [selectedModel, setSelectedModel] = useState<VideoModel>('gemini-veo');
   const [aspectRatio, setAspectRatio] = useState<'9:16' | '16:9'>('9:16');
   const [duration, setDuration] = useState<number>(5);
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>('default');
   const [apiKeySelected, setApiKeySelected] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[0]);
   const [startImage, setStartImage] = useState<ImageFile | null>(null);
@@ -152,9 +155,17 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     setError(null);
     setGeneratedVideoUrl(null);
 
+    // Apply Video Style Logic
+    let finalPrompt = prompt;
+    if (videoStyle === 'casual') {
+        finalPrompt += " Visual Style: Create a casual, genuine video. It should not look like a promotional video. Aim for an informal, authentic vibe, like user-generated content.";
+    } else if (videoStyle === 'formal') {
+        finalPrompt += " Visual Style: Create a formal product presentation video. It should convey credibility, seriousness, and conviction. Professional commercial look.";
+    }
+
     try {
       spendCredit(creditCost);
-      const videoUrl = await generateVideo(prompt, selectedModel, aspectRatio, duration, startImage);
+      const videoUrl = await generateVideo(finalPrompt, selectedModel, aspectRatio, duration, startImage);
       setGeneratedVideoUrl(videoUrl);
     } catch (e) {
       console.error(e);
@@ -166,7 +177,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, user, spendCredit, selectedModel, aspectRatio, duration, isVEOSelected, requestLogin, startImage]);
+  }, [prompt, user, spendCredit, selectedModel, aspectRatio, duration, isVEOSelected, requestLogin, startImage, videoStyle]);
   
   if (isVEOSelected && !apiKeySelected) {
       return (
@@ -251,35 +262,69 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ requestLogin }) => {
           <p className="text-xs text-slate-500 mt-2">Upload a video to use its final frame as the starting point for the new generation.</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="flex items-center gap-4 bg-slate-800 p-2 rounded-lg shadow-md">
-                <span className="text-slate-300 font-medium pl-2">Aspect Ratio:</span>
-                <button
-                    onClick={() => setAspectRatio('9:16')}
-                    className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '9:16' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-                >
-                    9:16
-                </button>
-                <button
-                    onClick={() => setAspectRatio('16:9')}
-                    className={`px-4 py-2 rounded-md font-semibold transition-colors ${aspectRatio === '16:9' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-                >
-                    16:9
-                </button>
-            </div>
-            <div className="flex items-center gap-4 bg-slate-800 p-3 rounded-lg shadow-md w-full max-w-xs sm:w-auto">
-                <label htmlFor="duration-slider" className="text-slate-300 font-medium whitespace-nowrap">Duration:</label>
-                <input
-                    id="duration-slider"
-                    type="range"
-                    min="4"
-                    max="8"
-                    value={duration}
-                    onChange={(e) => setDuration(parseInt(e.target.value, 10))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer range-thumb-purple"
-                    style={{'--thumb-color': 'rgb(168 85 247)'} as React.CSSProperties}
-                />
-                <span className="font-semibold text-white bg-slate-700 rounded-md px-3 py-1 w-16 text-center">{duration}s</span>
+        <div className="w-full flex flex-col gap-4 bg-slate-800 p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold text-slate-200">Settings</h3>
+            <div className="flex flex-col md:flex-row gap-6">
+                
+                <div className="flex flex-col gap-2">
+                    <span className="text-slate-300 font-medium text-sm">Aspect Ratio</span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setAspectRatio('9:16')}
+                            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${aspectRatio === '9:16' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                        >
+                            9:16
+                        </button>
+                        <button
+                            onClick={() => setAspectRatio('16:9')}
+                            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${aspectRatio === '16:9' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                        >
+                            16:9
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <span className="text-slate-300 font-medium text-sm">Video Style</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={() => setVideoStyle('default')}
+                            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${videoStyle === 'default' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                        >
+                            Default
+                        </button>
+                        <button
+                            onClick={() => setVideoStyle('casual')}
+                            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${videoStyle === 'casual' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                        >
+                            Casual
+                        </button>
+                        <button
+                            onClick={() => setVideoStyle('formal')}
+                            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${videoStyle === 'formal' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                        >
+                            Formal
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col gap-2 w-full max-w-xs">
+                    <div className="flex justify-between items-center">
+                        <label htmlFor="duration-slider" className="text-slate-300 font-medium text-sm">Duration</label>
+                        <span className="text-xs font-semibold text-white bg-slate-700 rounded px-2 py-0.5">{duration}s</span>
+                    </div>
+                    <input
+                        id="duration-slider"
+                        type="range"
+                        min="4"
+                        max="8"
+                        value={duration}
+                        onChange={(e) => setDuration(parseInt(e.target.value, 10))}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer range-thumb-purple"
+                        style={{'--thumb-color': 'rgb(168 85 247)'} as React.CSSProperties}
+                    />
+                </div>
+
             </div>
         </div>
 

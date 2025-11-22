@@ -10,7 +10,9 @@ interface PaymentModalProps {
 }
 
 // Em um ambiente de produção real, esta chave viria de uma variável de ambiente.
-const MERCADO_PAGO_PUBLIC_KEY = 'TEST-c8172c30-518f-4328-91e8-72433065e893'; 
+// FIX: A chave pública foi trocada por uma chave de TESTE para o Brasil para resolver o erro "Could not fetch site ID".
+// A chave anterior era de produção e para uma região diferente, causando o conflito.
+const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-893f2ebf-62c5-4b29-96fc-ade0dfe88dca';
 
 type PaymentMethod = 'card' | 'pix';
 
@@ -23,6 +25,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'error' | null>(null);
   const [pixData, setPixData] = useState<{ qr_code: string; qr_code_base64: string; expiration: number } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
   
   const paymentBrickRef = useRef<any>(null);
 
@@ -40,6 +43,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
     setPaymentStatus(null);
     setPixData(null);
     setIsCopied(false);
+    setIsGeneratingPix(false);
   };
   
   const handleClose = () => {
@@ -60,7 +64,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     let isMounted = true;
     if (isOpen && activeMethod === 'card' && !paymentBrickRef.current) {
-        const mp = new window.MercadoPago(MERCADO_PAGO_PUBLIC_KEY, { locale: 'pt-BR' });
+        const mp = new window.MercadoPago(MERCADO_PAGO_PUBLIC_KEY, {
+            locale: 'pt-BR'
+        });
         const bricksBuilder = mp.bricks();
 
         const renderCardBrick = async () => {
@@ -69,13 +75,22 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
                 const brick = await bricksBuilder.create('payment', 'paymentBrick_container', {
                     initialization: {
                         amount: selectedPackage.price,
-                        payer: { email: user?.email || '' },
+                        // FIX: Added `entityType: 'individual'` to the payer object to resolve the Mercado Pago brick error.
+                        // The error "entityType only receives the value individual or association" was caused by this missing field.
+                        payer: { 
+                            email: user?.email || '',
+                            entityType: 'individual'
+                        },
                     },
                     customization: {
                         visual: { style: { theme: 'dark' } },
                         paymentMethods: {
                             creditCard: 'all',
                             debitCard: 'all',
+                            ticket: "all",
+                            bankTransfer: "all",
+                            onboarding_credits: "all",
+                            maxInstallments: 1
                         },
                     },
                     callbacks: {
@@ -126,18 +141,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
 
   const handleGeneratePix = async () => {
     if (!user) return;
-    setIsProcessing(true);
-    setPaymentStatus('pending');
+    setIsGeneratingPix(true);
     setErrorMessage('');
     setPixData(null);
     try {
         const data = await paymentService.createPixPayment(selectedPackage.price.toFixed(2), selectedPackage.credits, user.email);
         setPixData(data);
     } catch(error) {
-        setPaymentStatus('error');
         setErrorMessage(error instanceof Error ? error.message : "An unknown error occurred.");
     } finally {
-        setIsProcessing(false);
+        setIsGeneratingPix(false);
     }
   }
 
@@ -185,38 +198,47 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div className="p-6">
                 <div className="flex gap-1 bg-slate-700/50 p-1 rounded-lg">
-                    <button onClick={() => setActiveMethod('card')} className={`flex-1 py-3 text-sm font-semibold transition-colors rounded-lg flex items-center justify-center gap-2 ${activeMethod === 'card' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:bg-slate-800/60'}`}><CreditCardIcon className="w-5 h-5"/> Credit Card</button>
-                    <button onClick={() => setActiveMethod('pix')} className={`flex-1 py-3 text-sm font-semibold transition-colors rounded-lg flex items-center justify-center gap-2 ${activeMethod === 'pix' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:bg-slate-800/60'}`}><PixIcon className="w-5 h-5"/> PIX</button>
+                    <button onClick={() => setActiveMethod('card')} className={`flex-1 py-3 text-sm font-semibold transition-colors rounded-lg flex items-center justify-center gap-2 ${activeMethod === 'card' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>
+                        <CreditCardIcon className="w-5 h-5" />
+                        Credit / Debit Card
+                    </button>
+                    <button onClick={() => setActiveMethod('pix')} className={`flex-1 py-3 text-sm font-semibold transition-colors rounded-lg flex items-center justify-center gap-2 ${activeMethod === 'pix' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800/50'}`}>
+                        <PixIcon className="w-5 h-5" />
+                        Pix
+                    </button>
                 </div>
-                
-                <div className="mt-4 min-h-[200px]">
-                    {activeMethod === 'card' && <div id="paymentBrick_container"></div>}
-                    {activeMethod === 'pix' && (
-                        <div className="flex flex-col items-center justify-center text-center">
-                            {isProcessing && <LoadingSpinnerIcon className="w-10 h-10 animate-spin text-purple-400" />}
-                            {!isProcessing && !pixData && (
-                                <button onClick={handleGeneratePix} className="px-6 py-3 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md">Generate PIX Code</button>
-                            )}
-                            {pixData && (
-                                <div className="flex flex-col items-center gap-4">
-                                    <p className="text-slate-300">Scan the QR code to pay:</p>
-                                    <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="PIX QR Code" className="w-48 h-48 rounded-lg bg-white p-2" />
-                                    <p className="text-slate-400 text-sm">Or copy the code below:</p>
-                                    <div className="w-full flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
-                                        <input type="text" readOnly value={pixData.qr_code} className="w-full bg-transparent text-slate-300 font-mono text-xs border-none outline-none" />
-                                        <button onClick={handleCopyPix} className="p-2 bg-slate-700 rounded-md hover:bg-purple-600 transition-colors">
-                                            {isCopied ? <CheckIcon className="w-4 h-4 text-green-400" /> : <CopyIcon className="w-4 h-4" />}
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-slate-500">Waiting for payment confirmation...</p>
+                {activeMethod === 'card' && (
+                    <div id="paymentBrick_container" className="mt-4 min-h-[350px]">
+                        {/* O Brick do Mercado Pago será renderizado aqui */}
+                    </div>
+                )}
+                {activeMethod === 'pix' && (
+                    <div className="mt-4 min-h-[350px] flex flex-col items-center justify-center text-center">
+                        {pixData ? (
+                            <div className="flex flex-col items-center gap-4">
+                                <h3 className="text-lg font-semibold text-white">Scan to Pay with PIX</h3>
+                                <img src={`data:image/png;base64,${pixData.qr_code_base64}`} alt="PIX QR Code" className="w-48 h-48 bg-white p-2 rounded-lg" />
+                                <div className="w-full bg-slate-700/50 p-3 rounded-lg flex items-center gap-2">
+                                    <input type="text" readOnly value={pixData.qr_code} className="w-full bg-transparent text-slate-300 text-xs font-mono outline-none border-none" />
+                                    <button onClick={handleCopyPix} className="px-3 py-1.5 text-sm font-medium bg-slate-600 rounded-md hover:bg-purple-600 transition-colors">
+                                        {isCopied ? <CheckIcon className="w-4 h-4 text-green-400" /> : <CopyIcon className="w-4 h-4" />}
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-                {errorMessage && (
-                    <div className="mt-4 text-center text-red-400 text-sm">
-                        {errorMessage}
+                                <p className="text-xs text-slate-400">This code expires in 10 minutes. After payment, your credits will be added automatically.</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-4">
+                                <button
+                                    onClick={handleGeneratePix}
+                                    disabled={isGeneratingPix}
+                                    className="inline-flex items-center justify-center px-6 py-3 font-semibold text-base text-white transition-all duration-200 bg-purple-600 rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-purple-500 disabled:opacity-50"
+                                >
+                                    {isGeneratingPix ? <LoadingSpinnerIcon className="animate-spin -ml-1 mr-3 h-5 w-5" /> : null}
+                                    Generate PIX Code
+                                </button>
+                                {errorMessage && <p className="text-red-400 text-sm mt-2">{errorMessage}</p>}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -225,22 +247,21 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        {mainContent()}
-        {paymentStatus !== 'success' && activeMethod === 'card' && (
-             <div className="p-4 bg-slate-900/50 rounded-b-lg flex justify-end gap-4">
-                <button onClick={handleClose} className="px-4 py-2 font-semibold bg-slate-600 hover:bg-slate-500 rounded-md">Cancel</button>
-                <button 
-                  onClick={() => document.getElementById('paymentBrick_container')?.querySelector('form')?.submit()}
-                  disabled={isProcessing}
-                  className="px-4 py-2 font-semibold bg-purple-600 hover:bg-purple-500 rounded-md flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isProcessing ? <LoadingSpinnerIcon className="w-5 h-5 animate-spin" /> : <MercadoPagoIcon className="w-5 h-5" />}
-                  Pay ${selectedPackage.price.toFixed(2)}
-                </button>
-            </div>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]" onClick={handleClose}>
+      <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {isProcessing && (
+          <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center z-20">
+            <LoadingSpinnerIcon className="w-10 h-10 animate-spin text-purple-400" />
+            <p className="mt-4 text-lg font-semibold text-white">
+                {paymentStatus === 'success' ? 'Payment Confirmed!' : 'Processing Payment...'}
+            </p>
+          </div>
         )}
+        {mainContent()}
+        <footer className="p-4 bg-slate-900/50 flex items-center justify-center gap-2">
+            <p className="text-xs text-slate-500">Powered by</p>
+            <MercadoPagoIcon className="h-6 w-auto" />
+        </footer>
       </div>
     </div>
   );

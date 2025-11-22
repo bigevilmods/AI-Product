@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export const API_KEY_STORAGE_KEY = 'user-provided-api-key';
@@ -30,7 +31,11 @@ export const clearUserApiKey = (): void => {
  */
 export const getEffectiveApiKey = (): string => {
     const userApiKey = getUserApiKey();
-    const apiKey = userApiKey || process.env.API_KEY;
+    // For local Vite development, use `import.meta.env.VITE_API_KEY`.
+    // In the target environment (e.g., AI Studio), `process.env.API_KEY` is injected.
+    const envApiKey = (typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_API_KEY : undefined) || process.env.API_KEY;
+    const apiKey = userApiKey || envApiKey;
+
 
     if (!apiKey) {
         if (window.location.href.includes('videoGenerator')) {

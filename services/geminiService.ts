@@ -1,6 +1,5 @@
 
-
-import { Type, Modality } from "@google/genai";
+import { Type, Modality, GoogleGenAI } from "@google/genai";
 import { getGoogleGenAI, getEffectiveApiKey } from './api';
 import type { ImageFile, ConsistencyResult, LanguageCode, ImageModel, VideoModel, AspectRatio, StoryboardScene } from '../types';
 
@@ -211,11 +210,11 @@ The prompt must be structured exactly as follows:
 **Influencer Details:**
 - **Appearance:** Describe the influencer's key visual characteristics from the image (hair color, style, facial features). The description must be photographic and precise to ensure an identical recreation.
 - **Style:** Describe the influencer's clothing and overall style from the image.
-- **Vibe:** Describe the influencer's mood or personality as perceived from the image and the requested actions (e.g., energetic, thoughtful, joyful).
+- **Vibe:** Describe the influencer's mood or personality as perceived from the image (e.g., energetic, calm, sophisticated).
 
-**Shot List & Camera Angles:** Suggest 3-4 dynamic shots for the video that effectively capture the influencer's performance and the specified actions (e.g., 'Medium shot of the influencer smiling', 'Dynamic tracking shot following the influencer', 'Expressive close-up on the influencer's face').
+**Shot List & Camera Angles:** Suggest 2-3 dynamic shots that focus on the influencer and their actions (e.g., 'Medium shot of the influencer laughing', 'Close-up on their expressive reaction', 'Dynamic tracking shot as they move').
 
-**Lighting:** Suggest a lighting style that complements the mood and actions (e.g., 'Golden hour lighting for a warm, happy feel', 'Dramatic studio lighting for a powerful look', 'Bright, natural daylight for an authentic vibe').
+**Lighting:** Suggest a lighting style that complements the mood (e.g., 'Soft, natural window light', 'Dramatic studio lighting', 'Golden hour sunlight').
 
 **Dialogue/Speech:** ${dialogueInstruction}
 `;
@@ -230,7 +229,7 @@ export const generateInfluencerOnlyPrompt = async (
     const ai = getGoogleGenAI();
     const influencerPart = fileToGenerativePart(influencerImage);
     const promptTemplate = createInfluencerOnlyPromptTemplate(actions, language);
-    
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: {
@@ -243,7 +242,7 @@ export const generateInfluencerOnlyPrompt = async (
 
     return response.text;
   } catch (error) {
-    console.error("Error generating influencer-only prompt with Gemini:", error);
+    console.error("Error generating influencer-only prompt:", error);
     if (error instanceof Error) {
         return `An error occurred: ${error.message}`;
     }
@@ -251,243 +250,206 @@ export const generateInfluencerOnlyPrompt = async (
   }
 };
 
-
-const consistencySchema = {
-  type: Type.OBJECT,
-  properties: {
-    consistent: {
-      type: Type.BOOLEAN,
-      description: "Is the prompt free of ambiguities that could cause visual deviation from a reference image?"
-    },
-    reason: {
-      type: Type.STRING,
-      description: "A brief explanation for the consistency rating. If inconsistent, identify the ambiguous part."
-    },
-  },
-  required: ['consistent', 'reason'],
-};
-
 export const testPromptConsistency = async (prompt: string): Promise<ConsistencyResult> => {
-  const systemInstruction = `You are a meticulous AI prompt auditor. Your task is to analyze the following prompt, which is intended for a video generation AI. Your sole focus is to determine if the prompt's descriptions will lead to a **visually consistent** output that is **identical** to the reference images it was based on.
-
-Check for any ambiguity or creative language in the 'Influencer Details' and 'Product Details' sections that could cause the video AI to deviate from the source material. Pay special attention to the brand logo, colors, materials, design, and the influencer's appearance. The prompt must demand an exact, photorealistic match, not an 'inspired by' or 'similar to' version.
-
-Based on your audit, respond with the specified JSON format indicating if the prompt is consistent and provide a brief reason for your assessment. If inconsistent, point out the specific part of the prompt that is ambiguous. A good prompt is one that leaves no room for creative interpretation on critical features.`;
-
-  try {
-     const ai = getGoogleGenAI();
-     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Audit this prompt:\n\n---\n\n${prompt}`,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: consistencySchema,
-      },
-    });
-
-    // FIX: The API may wrap the JSON response in markdown. This extracts the JSON before parsing.
-    const jsonText = response.text.trim();
-    const jsonMatch = jsonText.match(/```(json)?\n([\s\S]*?)\n```/);
-    const parsableText = jsonMatch ? jsonMatch[2] : jsonText;
-
-    const result = JSON.parse(parsableText);
-    return result as ConsistencyResult;
-  } catch (error) {
-    console.error("Error testing prompt consistency:", error);
-    if (error instanceof Error) {
-      return {
-        consistent: false,
-        reason: `Failed to test consistency: ${error.message}`,
-      };
-    }
-    return {
-      consistent: false,
-      reason: "An unknown error occurred during the consistency test.",
-    };
-  }
-};
-
-export const generateImage = async (prompt: string, numberOfImages: number, model: ImageModel, aspectRatio: AspectRatio): Promise<string[]> => {
-  try {
-    const ai = getGoogleGenAI();
-    switch (model) {
-      case 'imagen-4.0-generate-001':
-        const responseImagen = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: prompt,
-            config: {
-              numberOfImages: numberOfImages,
-              outputMimeType: 'image/jpeg',
-              aspectRatio: aspectRatio,
-            },
-        });
-
-        if (responseImagen.generatedImages && responseImagen.generatedImages.length > 0) {
-            return responseImagen.generatedImages.map(
-                (img) => `data:image/jpeg;base64,${img.image.imageBytes}`
-            );
-        } else {
-            throw new Error("No images were generated by the API.");
-        }
-
-      case 'nano-banana':
-        const responseNano = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: {
-            parts: [{ text: prompt }],
-          },
-          config: {
-              responseModalities: [Modality.IMAGE],
-          },
-        });
-
-        for (const part of responseNano.candidates[0].content.parts) {
-          if (part.inlineData) {
-            const base64ImageBytes: string = part.inlineData.data;
-            return [`data:image/png;base64,${base64ImageBytes}`];
-          }
-        }
-        throw new Error("Nano Banana model did not return an image.");
-
-      case 'grok-imagine':
-        throw new Error("Grok Imagine model is not yet integrated.");
-
-      default:
-        throw new Error(`Unsupported image model: ${model}`);
-    }
-  } catch (error) {
-    console.error("Error generating image:", error);
-    if (error instanceof Error) {
-        throw new Error(`An error occurred while generating the image: ${error.message}`);
-    }
-    throw new Error("An unknown error occurred while generating the image.");
-  }
-};
-
-export const generateVideo = async (prompt: string, model: VideoModel, aspectRatio: '9:16' | '16:9', durationInSeconds: number, startImage: ImageFile | null = null): Promise<string> => {
-  try {
-    if (model !== 'gemini-veo') {
-      throw new Error(`Model '${model}' is not supported for video generation yet.`);
-    }
-
-    const ai = getGoogleGenAI();
-    const apiKey = getEffectiveApiKey();
-
-    // Defensively clamp and round the duration to ensure it's a valid integer.
-    const clampedDuration = Math.round(Math.max(4, Math.min(8, durationInSeconds)));
-
-    const payload: any = {
-      model: 'veo-3.1-fast-generate-preview',
-      prompt: prompt,
-      config: {
-        numberOfVideos: 1,
-        resolution: '720p',
-        aspectRatio: aspectRatio,
-        durationSeconds: clampedDuration
-      }
-    };
-    
-    if (startImage) {
-        payload.image = {
-            imageBytes: startImage.base64,
-            mimeType: startImage.mimeType,
-        };
-    }
-
-    let operation = await ai.models.generateVideos(payload);
-
-    while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      operation = await ai.operations.getVideosOperation({ operation: operation });
-    }
-
-    const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-
-    // Improved error handling for when video generation completes without a link
-    if (!downloadLink) {
-        if (operation.error) {
-            const errorMessage = (operation.error as any)?.message || JSON.stringify(operation.error);
-            throw new Error(`Video generation failed: ${errorMessage}`);
-        }
-        // Provide a more helpful message for the user.
-        throw new Error("Video generation completed, but the API did not return a video. This may be due to safety filters. Please try modifying your prompt.");
-    }
-    
-    const response = await fetch(`${downloadLink}&key=${apiKey}`);
-    if (!response.ok) {
-        throw new Error(`Failed to fetch video file: ${response.statusText}`);
-    }
-
-    const videoBlob = await response.blob();
-    return URL.createObjectURL(videoBlob);
-
-  } catch (error) {
-    console.error("Error generating video:", error);
-    if (error instanceof Error) {
-        if (error.message.includes("Requested entity was not found")) {
-            throw new Error("API key error. Please re-select your API key and try again.");
-        }
-        throw new Error(`An error occurred while generating the video: ${error.message}`);
-    }
-    throw new Error("An unknown error occurred while generating the video.");
-  }
-};
-
-const storyboardSchema = {
-    type: Type.OBJECT,
-    properties: {
-        scenes: {
-            type: Type.ARRAY,
-            description: "An array of storyboard scenes.",
-            items: {
-                type: Type.OBJECT,
-                properties: {
-                    scene: {
-                        type: Type.INTEGER,
-                        description: "The scene number, starting from 1."
-                    },
-                    description: {
-                        type: Type.STRING,
-                        description: "A detailed description of the scene, including camera angles, character actions, and setting."
-                    },
-                    imagePrompt: {
-                        type: Type.STRING,
-                        description: "A concise, descriptive prompt suitable for an AI image generator to create a visual for this scene."
-                    }
-                },
-                required: ['scene', 'description', 'imagePrompt']
-            }
-        }
-    },
-    required: ['scenes']
-};
-
-
-export const generateStoryboard = async (prompt: string): Promise<StoryboardScene[]> => {
-    const systemInstruction = `You are a creative film director and storyboard artist. Your task is to take a user's high-level video idea and break it down into a structured, 4-scene storyboard. Each scene should logically follow the previous one to create a cohesive narrative. For each scene, you must provide a detailed description and a separate, concise prompt for an AI image generator. The output must be a valid JSON object matching the provided schema.`;
-
     try {
         const ai = getGoogleGenAI();
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `Generate a 4-scene storyboard for this video idea: "${prompt}"`,
+            model: 'gemini-2.5-flash',
+            contents: {
+                parts: [
+                    {
+                        text: `Analyze the following video generation prompt for consistency. Check for contradictions between scene descriptions, influencer details, branding, and tone. Provide your analysis as a JSON object with two keys: "consistent" (a boolean) and "reason" (a string explaining your assessment, max 50 words).
+
+Prompt to analyze:
+---
+${prompt}
+---`
+                    }
+                ]
+            },
             config: {
-                systemInstruction,
                 responseMimeType: "application/json",
-                responseSchema: storyboardSchema,
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        consistent: { type: Type.BOOLEAN },
+                        reason: { type: Type.STRING },
+                    },
+                    required: ["consistent", "reason"],
+                },
             },
         });
 
-        const jsonText = response.text.trim();
-        const jsonMatch = jsonText.match(/```(json)?\n([\s\S]*?)\n```/);
-        const parsableText = jsonMatch ? jsonMatch[2] : jsonText;
-        const result = JSON.parse(parsableText);
+        const jsonString = response.text;
+        return JSON.parse(jsonString) as ConsistencyResult;
 
-        if (result && result.scenes) {
-            return result.scenes as StoryboardScene[];
+    } catch (error) {
+        console.error("Error testing prompt consistency:", error);
+        return {
+            consistent: false,
+            reason: "Could not analyze prompt due to a technical error. Check console for details.",
+        };
+    }
+};
+
+export const generateImage = async (
+  prompt: string,
+  numberOfImages: number,
+  model: ImageModel,
+  aspectRatio: AspectRatio
+): Promise<string[]> => {
+    try {
+        const ai = getGoogleGenAI();
+
+        if (model === 'nano-banana') {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image',
+                contents: { parts: [{ text: prompt }] },
+                config: {
+                    responseModalities: [Modality.IMAGE],
+                },
+            });
+            const base64ImageBytes = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            if (base64ImageBytes) {
+                return [`data:image/png;base64,${base64ImageBytes}`];
+            }
+            throw new Error("Nano Banana model did not return an image.");
+
+        } else if (model === 'imagen-4.0-generate-001') {
+            const response = await ai.models.generateImages({
+                model: 'imagen-4.0-generate-001',
+                prompt: prompt,
+                config: {
+                    numberOfImages,
+                    outputMimeType: 'image/jpeg',
+                    aspectRatio: aspectRatio,
+                },
+            });
+            
+            return response.generatedImages.map(img => `data:image/jpeg;base64,${img.image.imageBytes}`);
         }
-        throw new Error("Invalid storyboard format received from API.");
+        
+        throw new Error(`Unsupported image model: ${model}`);
+
+    } catch (error) {
+        console.error("Error generating image with Gemini:", error);
+        if (error instanceof Error) {
+            throw new Error(`An error occurred while generating the image: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating the image.");
+    }
+};
+
+export const generateVideo = async (
+    prompt: string,
+    model: VideoModel,
+    aspectRatio: '16:9' | '9:16',
+    duration: number, // Note: Duration is suggestive for the prompt, not a direct API parameter
+    startImage?: ImageFile | null
+): Promise<string> => {
+    try {
+        // For VEO, the API key MUST come from the aistudio selection dialog, which populates process.env.API_KEY.
+        // We explicitly use process.env.API_KEY here to avoid conflicts with custom keys set in local storage for other tools.
+        // For local Vite development, we allow a fallback to `import.meta.env.VITE_API_KEY`.
+        const apiKey = (typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_API_KEY : undefined) || process.env.API_KEY;
+
+        if (!apiKey) {
+            // This error will be caught and will prompt the user to re-select a key.
+            throw new Error("API key error: The API key is missing. Please select a key.");
+        }
+        
+        const ai = new GoogleGenAI({ apiKey });
+        
+        const payload: any = {
+            model: 'veo-3.1-fast-generate-preview',
+            prompt,
+            config: {
+                numberOfVideos: 1,
+                resolution: '720p',
+                aspectRatio,
+            }
+        };
+
+        if (startImage) {
+            payload.image = {
+                imageBytes: startImage.base64,
+                mimeType: startImage.mimeType,
+            };
+        }
+
+        let operation = await ai.models.generateVideos(payload);
+
+        while (!operation.done) {
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            // Re-create instance for polling to ensure fresh key is used if it was re-selected
+            const pollingApiKey = (typeof import.meta.env !== 'undefined' ? import.meta.env.VITE_API_KEY : undefined) || process.env.API_KEY;
+
+             if (!pollingApiKey) {
+                throw new Error("API key error: The API key was lost during polling. Please select a key again.");
+            }
+            const pollingAi = new GoogleGenAI({ apiKey: pollingApiKey });
+            operation = await pollingAi.operations.getVideosOperation({ operation: operation });
+        }
+
+        const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (!downloadLink) {
+            throw new Error("Video generation completed, but no download link was found.");
+        }
+        
+        // The download also requires the same key.
+        const response = await fetch(`${downloadLink}&key=${apiKey}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch video from download link. Status: ${response.status}`);
+        }
+
+        const videoBlob = await response.blob();
+        return URL.createObjectURL(videoBlob);
+
+    } catch (error) {
+        console.error("Error generating video with Gemini:", error);
+        if (error instanceof Error) {
+            if (error.message.includes("Requested entity was not found")) {
+                throw new Error("API key error: The selected API key is invalid or lacks permissions. Please select a different key.");
+            }
+            throw new Error(`An error occurred: ${error.message}`);
+        }
+        throw new Error("An unknown error occurred while generating the video.");
+    }
+};
+
+export const generateStoryboard = async (prompt: string): Promise<StoryboardScene[]> => {
+    try {
+        const ai = getGoogleGenAI();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-pro', // Using a more powerful model for structured generation
+            contents: {
+                parts: [{
+                    text: `Create a 4-scene storyboard for a short video based on this idea: "${prompt}".
+For each scene, provide a scene number, a detailed description of the action and visuals, and a concise image generation prompt that captures the essence of the scene.
+Return the result as a JSON array of objects.`
+                }]
+            },
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            scene: { type: Type.INTEGER },
+                            description: { type: Type.STRING },
+                            imagePrompt: { type: Type.STRING },
+                        },
+                        required: ["scene", "description", "imagePrompt"],
+                    }
+                }
+            }
+        });
+        const jsonString = response.text;
+        const scenes = JSON.parse(jsonString) as Omit<StoryboardScene, 'imageUrl' | 'isGeneratingImage'>[];
+        return scenes.map(scene => ({...scene, isGeneratingImage: false}));
+
     } catch (error) {
         console.error("Error generating storyboard:", error);
         if (error instanceof Error) {
@@ -497,29 +459,30 @@ export const generateStoryboard = async (prompt: string): Promise<StoryboardScen
     }
 };
 
-export const generateSpeech = async (prompt: string, voiceName: string): Promise<string> => {
+export const generateSpeech = async (text: string, voiceName: string): Promise<string> => {
     try {
         const ai = getGoogleGenAI();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: text }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
                     voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: voiceName },
+                        prebuiltVoiceConfig: { voiceName },
                     },
                 },
             },
         });
-
+        
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) {
-            throw new Error("API did not return audio data.");
+            throw new Error("The API did not return any audio data.");
         }
         return base64Audio;
+        
     } catch (error) {
-        console.error("Error generating speech with Gemini:", error);
+        console.error("Error generating speech:", error);
         if (error instanceof Error) {
             throw new Error(`An error occurred while generating speech: ${error.message}`);
         }

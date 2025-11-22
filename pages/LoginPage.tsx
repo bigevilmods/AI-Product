@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LoadingSpinnerIcon, XIcon } from '../components/icons';
@@ -13,6 +12,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
   const { login, register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
@@ -27,7 +27,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
     setError('');
     try {
       if (mode === 'login') {
-        await login({ email, password });
+        await login({ email, password, rememberMe });
       } else {
         await register({ email, password });
       }
@@ -103,7 +103,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               required
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-slate-300 text-sm font-bold mb-2" htmlFor="password">
               Password
             </label>
@@ -116,8 +116,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onClose }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-             {error && <p className="text-red-500 text-xs italic mt-2">{error}</p>}
           </div>
+          {mode === 'login' && (
+            <div className="mb-6">
+              <label className="flex items-center text-sm text-slate-400">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500"
+                />
+                <span className="ml-2">Remember me</span>
+              </label>
+            </div>
+          )}
+          {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
           <div className="flex items-center justify-between">
             <button
               className="w-full inline-flex items-center justify-center px-4 py-2 font-bold text-white transition-all duration-200 bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-purple-500 disabled:opacity-50"
